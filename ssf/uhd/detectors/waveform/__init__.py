@@ -1,0 +1,1 @@
+from waveformDetector import WaveformTopBlock, waveform_detector
