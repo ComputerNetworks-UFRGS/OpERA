@@ -15,7 +15,7 @@ import numpy as np
 
 from waveformDetector import WaveformAnalyzer, WaveformTopBlock
 from device import radioDevice
-from algorithm import WaveformAlgorithm
+from algorithm import WaveformDecision
 
 ## QA related to Waveform class
 #

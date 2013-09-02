@@ -23,14 +23,14 @@ from math      import *
 from optparse  import OptionParser
 
 # Project imports
-from device       import *
-from reception.sensing.energy      import EnergyDetectorC
-from reception.sensing.waveform    import WaveformDetector 
-from utils.block            import *
-from reception.architecture.feedback import FeedbackTopBlock, feedback_f
+from device             import *
+from reception.sensing  import EnergyDetectorC
+from reception.sensing  import WaveformDetector 
+from utils.block        import *
+from reception.architecture   import FeedbackTopBlock, feedback_f
 from algorithm    import BayesLearningThreshold, WaveformAlgorithm, FeedbackAlgorithm
-from algorithm    import KunstTimeFeedback
-from utils.sensing        import Logger, TopBlock
+from algorithm       import KunstTimeFeedback
+from utils.sensing   import Logger, TopBlock
 
 
 

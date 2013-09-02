@@ -1,5 +1,4 @@
-from sensing            import *
-
+from decision          import *
 from abstractAlgorithm	import AbstractAlgorithm, ThresholdAlgorithm
 from feedbackAlgorithm  import FeedbackAlgorithm, AlwaysTimeFeedback, ExponentialTimeFeedback, KunstTimeFeedback
 from qnoise		import QNoise

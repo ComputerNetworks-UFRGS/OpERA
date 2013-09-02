@@ -13,7 +13,7 @@ global_wave = [70.7521,27.1537,27.2256,70.4907,64.5644,58.0149,65.4034,69.3072,6
 
 ## Class implementing a Waveform Algorithm
 # Uses Pearson correlation do math a received signal  with the known patterns.
-class WaveformAlgorithm(ThresholdAlgorithm):
+class WaveformDecision(ThresholdAlgorithm):
 
 	## CTOR
 	# @param threshold Decision threshold

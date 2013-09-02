@@ -12,7 +12,7 @@ from gnuradio import gr, gr_unittest, fft, blocks
 
 from energyDetector         import EnergyDetectorC, EDTopBlock
 from device.radioDevice     import RadioDevice
-from algorithm.sensing      import EnergyAlgorithm
+from algorithm.decision      import EnergyDecision
 
 import numpy as np
 
@@ -38,7 +38,7 @@ class QaEnergyDetector(gr_unittest.TestCase):
 		mavg_size = 1
 
 		src = blocks.vector_source_c(data = src_data)
-		ed = EnergyDetectorC(fft_size, mavg_size, EnergyAlgorithm(1) )
+		ed = EnergyDetectorC(fft_size, mavg_size, EnergyDecision(1) )
 		dst = blocks.probe_signal_f()
 
 		## flowgraph
@@ -59,7 +59,8 @@ class QaEnergyDetector(gr_unittest.TestCase):
 		mavg_size = 1
 
 		src = blocks.vector_source_c(data = src_data)
-		ed = EnergyDetectorC(fft_size, mavg_size, EnergyAlgorithm(1) )
+		ed = EnergyDetectorC(fft_size, mavg_size, EnergyDecision(1) )
+
 		dst = blocks.probe_signal_f ()
 
 		# flowgraph
@@ -81,7 +82,7 @@ class QaEnergyDetector(gr_unittest.TestCase):
 				moving_avg_size = 8,
 				samp_rate = 100e3,
 				device = device,
-				algorithm = EnergyAlgorithm(expected_out - 1)
+				algorithm = EnergyDecision(expected_out - 1)
 			)
 		ed.run();
 
@@ -100,7 +101,7 @@ class QaEnergyDetector(gr_unittest.TestCase):
 				moving_avg_size = 1,
 				samp_rate = 100e3,
 				device = device,
-				algorithm = EnergyAlgorithm(expected_out + 1)
+				algorithm = EnergyDecision(expected_out + 1)
 			)
 		ed.run()
 

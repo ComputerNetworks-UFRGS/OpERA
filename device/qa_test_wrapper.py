@@ -15,17 +15,26 @@ from gnuradio import blocks
 from uhdWrapper import UHDWrapper
 
 # Other modules needed
+<<<<<<< HEAD
 from radioDevice              import RadioDevice
-from algorithm.sensing        import EnergyAlgorithm
+from algorithm.decision        import EnergyDecision
 from reception.sensing.energy import EDTopBlock
 
 ## Test algorithm 
 #
-class Qa_Algorithm(unittest.TestCase):
+class QaAlgorithm(unittest.TestCase):
+from radioDevice          import RadioDevice
+from algorithm.decision   import EnergyDecision
+from reception.sensing    import EDTopBlock
+
+## Test algorithm 
+#
+
+class QaAlgorithm(unittest.TestCase):
 
 	## Test UHDWrapper
 	def test_uhd_001(self):
-		uhd = UHDWrapper(device = None, algorithm = EnergyAlgorithm(10))
+		uhd = UHDWrapper(device = None, algorithm = EnergyDecision(10))
 
 		self.assertEqual(uhd.threshold, 10)
 		uhd.threshold = 11
@@ -48,7 +57,7 @@ class Qa_Algorithm(unittest.TestCase):
 				moving_avg_size = 1,
 				samp_rate = 100e3,
 				device = device,
-				algorithm = EnergyAlgorithm(threshold)
+				algorithm = EnergyDecision(threshold)
 			)
 
 		uhd = UHDWrapper(device, ed)
@@ -75,7 +84,7 @@ class Qa_Algorithm(unittest.TestCase):
 				moving_avg_size = 1,
 				samp_rate = 100e3,
 				device = device,
-				algorithm = EnergyAlgorithm(threshold)
+				algorithm = EnergyDecision(threshold)
 			)
 
 		uhd = UHDWrapper(device, ed)

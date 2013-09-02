@@ -12,9 +12,9 @@ import unittest
 import random
 
 # Modules  tested
-from energyAlgorithm   import EnergyAlgorithm
-from waveformAlgorithm import WaveformAlgorithm
-from bayesianAlgorithm import BayesLearningThreshold
+from energyDecision   import EnergyDecision
+from waveformDecision import WaveformDecision
+from bayesianDecision import BayesLearningThreshold
 
 # Other modules needed
 from device                              import radioDevice
@@ -22,13 +22,13 @@ from algorithm.abstractAlgorithm         import AbstractAlgorithm
 
 
 ## Test algorithm  module
-class Qa_Algorithm(unittest.TestCase):
+class QaDecision(unittest.TestCase):
 
-	## Test EnergyAlgorithm threhold
+	## Test EnergyDecision threhold
 	def test_ed_001(self):
 		th = 10
 
-		ed = EnergyAlgorithm(th)
+		ed = EnergyDecision(th)
 		self.assertEqual(th, ed.threshold)
 		self.assertEqual(ed.decision(th/2), 0)
 		self.assertEqual(ed.decision(th), 0)
@@ -39,7 +39,7 @@ class Qa_Algorithm(unittest.TestCase):
 		global signal # wrong size. update to 1024 points
 
 		th = 0.8
-		wd = WaveformAlgorithm(th)
+		wd = WaveformDecision(th)
 
 		self.assertEqual(th, wd.threshold)
 		dec = wd.decision([random.random() for i in xrange(1024)])

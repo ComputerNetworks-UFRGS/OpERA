@@ -21,9 +21,9 @@ import matplotlib.pyplot as plt
 # Project imports
 from device                     import RadioDevice
 from utils.sensing              import Logger
-from algorithm                  import BayesLearningThreshold, WaveformAlgorithm, FeedbackAlgorithm, AlwaysTimeFeedback
-from reception.sensing.energy   import EnergyDetectorC
-from reception.sensing.waveform import WaveformDetector 
+from algorithm                  import BayesLearningThreshold, WaveformDecision, FeedbackAlgorithm, AlwaysTimeFeedback
+from reception.sensing          import EnergyDetectorC
+from reception.sensing          import WaveformDetector 
 
 # UUT
 from feedback import FeedbackTopBlock, FeedbackF
@@ -139,7 +139,19 @@ class QaFeedback(gr_unittest.TestCase):
 
 		# detectors utilized
 		bl = EnergyDetectorC( fft_size, 1, bl_algo )
+<<<<<<< HEAD:OpERA/src/reception/architecture/feedback/qa_feedback.py
+<<<<<<< HEAD:OpERA/src/reception/architecture/feedback/qa_feedback.py
 		ev = WaveformDetector( fft_size, WaveformAlgorithm(0.7) )
+=======
+<<<<<<< HEAD:OpERA/src/reception/architecture/feedback/qa_feedback.py
+		ev = WaveformDetector( fft_size, WaveformAlgorithm(0.7) )
+=======
+		ev = WaveformDetector( fft_size, WaveformDecision(0.7) )
+>>>>>>> d6c6efa... organizacao de arquivos e pastas modificada:OpERA/src/reception/architecture/feedback/qa_feedback.py
+>>>>>>> 0441bc3... organizacao de arquivos e pastas modificada:OpERA/src/reception/architecture/feedback/qa_feedback.py
+=======
+		ev = WaveformDetector( fft_size, WaveformDecision(0.7) )
+>>>>>>> organizacao de arquivos e pastas modificada:OpERA/src/reception/architecture/qa_feedback.py
 
 		# top block
 		self.tb = FeedbackTopBlock(device = device,

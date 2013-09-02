@@ -3,7 +3,7 @@
 from algorithm.abstractAlgorithm import ThresholdAlgorithm
 
 ## Simple energy detection algorithm based in threshold comparion
-class EnergyAlgorithm(ThresholdAlgorithm):
+class EnergyDecision(ThresholdAlgorithm):
 
 	## CTOR
 	# @param th Initial threshold

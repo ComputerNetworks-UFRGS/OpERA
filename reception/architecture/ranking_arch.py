@@ -4,8 +4,8 @@ from gnuradio                   import gr, fft
 from device                     import UHDSSArch
 from utils.sensing.top_block    import TopBlock
 from utils.block                import GroupInN
-from algorithm                  import sensing
-from reception.sensing.energy   import EnergyCalculator
+from algorithm                  import decision
+from reception.sensing          import EnergyCalculator
 
 import time
 import numpy as np

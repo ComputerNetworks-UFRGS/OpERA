@@ -16,11 +16,11 @@ import random
 import numpy as np
 
 #from device.uhd import *
-from device              import *
-from algorithm            import EnergyAlgorithm
-from utils.block       import *
-from reception.sensing.energy import EnergySSArch
-from utils.sensing                 import Channel, TopBlock, Logger, ChannelModeler
+from device             import *
+from algorithm          import EnergyAlgorithm
+from utils.block        import *
+from reception.sensing  import EnergySSArch
+from utils.sensing      import Channel, TopBlock, Logger, ChannelModeler
 
 ## Builds the US top block.
 # The RX path performs the ED sensing

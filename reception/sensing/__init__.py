@@ -1,2 +1,2 @@
-import energy
-import waveform
+from energyDetector import *
+from waveformDetector import *
