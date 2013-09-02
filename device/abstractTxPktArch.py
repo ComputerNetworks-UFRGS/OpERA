@@ -17,5 +17,5 @@ class AbstractTxPktArch( object ):
 	# @param payload Pkt Payload.
 	# @param eof End Of File.
 	@abstractmethod
-	def sendPkt(self, payload, eof = False):
+	def send_pkt(self, payload, eof = False):
 		pass

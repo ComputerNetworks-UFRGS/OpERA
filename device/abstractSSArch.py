@@ -13,7 +13,7 @@ class AbstractSSArch(object):
 	## Must be implemented on derived classes.
 	# @param the_list List of Channels objects to sense.
 	@abstractmethod
-	def senseChannel(self, the_list):
+	def sense_channel(self, the_list):
 		pass
 
 
@@ -21,11 +21,11 @@ class AbstractSSArch(object):
 	# @param the_list     List of channels to sense.
 	# @param sensing_time Sensing duration in each channel.
 	# @return Sensing information of all channels.
-	def senseChannelList(self, the_list, sensing_time):
+	def sense_channel_list(self, the_list, sensing_time):
 		data = []
 
 		for channel in the_list:
-			d = self.senseChannel( channel, sensing_time )
-			data.append( d )
+			d = self.sense_channel(channel, sensing_time)
+			data.append(d)
 
 		return data
