@@ -1,3 +1,19 @@
+"""
+Copyright 2013 OpERA
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+"""
+
 #!/usr/bin/env python
 
 ## @package device
@@ -139,19 +155,8 @@ class QaFeedback(gr_unittest.TestCase):
 
 		# detectors utilized
 		bl = EnergyDetectorC( fft_size, 1, bl_algo )
-<<<<<<< HEAD:OpERA/src/reception/architecture/feedback/qa_feedback.py
-<<<<<<< HEAD:OpERA/src/reception/architecture/feedback/qa_feedback.py
-		ev = WaveformDetector( fft_size, WaveformAlgorithm(0.7) )
-=======
-<<<<<<< HEAD:OpERA/src/reception/architecture/feedback/qa_feedback.py
-		ev = WaveformDetector( fft_size, WaveformAlgorithm(0.7) )
-=======
 		ev = WaveformDetector( fft_size, WaveformDecision(0.7) )
->>>>>>> d6c6efa... organizacao de arquivos e pastas modificada:OpERA/src/reception/architecture/feedback/qa_feedback.py
->>>>>>> 0441bc3... organizacao de arquivos e pastas modificada:OpERA/src/reception/architecture/feedback/qa_feedback.py
-=======
-		ev = WaveformDetector( fft_size, WaveformDecision(0.7) )
->>>>>>> organizacao de arquivos e pastas modificada:OpERA/src/reception/architecture/qa_feedback.py
+
 
 		# top block
 		self.tb = FeedbackTopBlock(device = device,
