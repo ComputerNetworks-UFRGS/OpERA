@@ -33,7 +33,7 @@ import numpy as np
 
 #from device.uhd import *
 from device             import *
-from algorithm          import EnergyAlgorithm
+from algorithm.decision import EnergyDecision
 from utils.block        import *
 from reception.sensing  import EnergySSArch
 from utils.sensing      import Channel, TopBlock, Logger, ChannelModeler
@@ -56,7 +56,7 @@ def build_us_block(options):
 				fft_size  = 512,
 				mavg_size = 5,
 				algorithm = None
-				#algorithm = EnergyAlgorithm( th = 0.00000001 )
+				#algorithm = EnergyDecision( th = 0.00000001 )
 				)
 		tb.rx = UHDWrapper( device = device_source, algorithm = rx_path )
 		tb.connect( device_source.source, rx_path )
