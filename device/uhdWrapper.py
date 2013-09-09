@@ -21,54 +21,24 @@ Copyright 2013 OpERA
 class UHDWrapper(object):
 
 	## CTOR
-	# @param device
-	# @param algorithm
-	def __init__(self, device, algorithm):
-		object.__setattr__(self, '_device', device)
-		object.__setattr__(self, '_algorithm', algorithm)
+	def __init__(self):
+		object.__setattr__(self, '_dict_of_archs', {})
 
-	@property
-	def device(self):
-		return self._device
+	def add_path(self, abstract_arch, name_of_arch):
+		#abstract_arch must be an instance of some abstract architeture class.
 
-	@property
-	def algorithm(self):
-		return self._algorithm
+		self._dict_of_archs[name_of_arch] = abstract_arch
 
-	# WARNING
-	#
-	# Changes in __getattr__ and __setattr__ should be made with care
-	#
-	# Proxied classes
+		setattr(self, name_of_arch, abstract_arch)
 
-	##
-	# @param val
-	def __getattr__(self, val):
+	def __setattr__ (self, name, val):
 		tmp = None
 
-		# Check if _device has the attribute, otherwise check in _algorithm
-		if hasattr(self._device, val):
-			tmp = self._device
-		elif hasattr(self._algorithm, val):
-			tmp = self._algorithm
+		if name in self._dict_of_archs:
+			tmp = self._dict_of_archs[name]
 
 		if tmp:
-			return getattr(tmp, val)
-
-		raise AttributeError
-
-	## Proxied classes
-	def __setattr__(self, name, val):
-
-		tmp = None
-
-		if hasattr(self._device, name):
-			tmp = self._device
-		elif hasattr(self._algorithm, name):
-			tmp = self._algorithm
-
-		if tmp:
-			setattr(tmp, name, val)
-			return
+			setattr(UHDWrapper, name, tmp)
+			return 
 
 		raise AttributeError
