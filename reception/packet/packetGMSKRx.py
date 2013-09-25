@@ -16,19 +16,23 @@ Copyright 2013 OpERA
 
 ## @package block_utils
 
+# ::TODO:: class description
+
+# gnuradio imports
 from gnuradio     import gr, digital, blocks
 from grc_gnuradio import blks2 as grc_blks2
 
-from device       import UHDTxPktArch
+# project import
+from device 	import UHDRxArch
 
-
-class PacketGMSKRx(gr.hier_block2):
+##
+class PacketGMSKRx(UHDRxArch):
 
 	## CTOR
 	# @param callback
 	def __init__(self, callback):
 
-		gr.hier_block2.__init__(
+		UHDRxArch.__init__(
 				self,
 				name =  'PacketGMSKRx',
 				input_signature  = gr.io_signature(1, 1, gr.sizeof_gr_complex),

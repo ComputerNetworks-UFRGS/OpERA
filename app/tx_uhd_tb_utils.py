@@ -17,7 +17,7 @@ Copyright 2013 OpERA
 #!/usr/bin/env python
 
 from gnuradio            import gr, digital, uhd
-from gnuradio		 import blocks
+from gnuradio			 import blocks
 from grc_gnuradio        import blks2 as grc_blks2
 from gnuradio.eng_option import eng_option
 from optparse            import OptionParser

@@ -30,6 +30,10 @@ from utils.sensing.top_block     import TopBlock
 ## Calculate the energy
 # Receives a vector of floats as inputs.
 class EnergyCalculator(gr.sync_block):
+
+	## CTOR
+	# @param vec_size
+	# @param algorithm
 	def __init__(self, vec_size, algorithm):
 		gr.sync_block.__init__(
 				self,
@@ -42,7 +46,7 @@ class EnergyCalculator(gr.sync_block):
 		self.cont = 0
 
 	## Calculate the energy
-	# @param	input_items		Input array with float values
+	# @param	input_items	Input array with float values
 	# @param	output_items	Energy calculated
 	def work(self, input_items, output_items):
 		in0  = input_items[0][0]
@@ -84,13 +88,11 @@ class EnergyDetectorC(gr.hier_block2):
 		## Flow graph
 		self.connect(self, self.s2v_0, self.fft_0, self.c2mag_0, self.ec, self)
 
-##
-#
+## A UHDSSArch with the energy detector.
+# Provides the sense_channel() method to sense a list of channels.
 class EnergySSArch( UHDSSArch ):
 
 	## CTOR
-	# A UHDSSArch with the energy detector.
-	# Provides the sense_channel() method to sense a list of channels.
 	# @param device RadioDevice instance.
 	# @param fft_size FFT Lenght utilized in the EnergyDetector.
 	# @param mavg_size Number of elements considered in the energy moving average.
@@ -102,7 +104,7 @@ class EnergySSArch( UHDSSArch ):
 			uhd              = device,
 			name             = "EnergySSArch",
 			input_signature  = gr.io_signature(1, 1, gr.sizeof_gr_complex),
-			output_signature = gr.io_signature(0, 0, 0),
+			output_signature = gr.io_signature(1, 1, gr.sizeof_float),
 		)
 
 
@@ -120,7 +122,7 @@ class EnergySSArch( UHDSSArch ):
 		#             #
 		# Connections #
 		#             #
-		self.connect(self, self._detector, self._sink )
+		self.connect(self, self._detector, self)
 
 	## Configure the device to sense the given frequency.
 	# @param the_channel Channel object instance. Channel to sense.
@@ -139,6 +141,11 @@ class EnergySSArch( UHDSSArch ):
 		return self._sink.level()
 
 
+	@property
+	def output(self):
+		return self._sink.level()
+
+
 ## Energy Detector top block
 # ::TODO:: Update to UHDSSArch implementation
 class EDTopBlock( TopBlock ):
@@ -149,6 +156,7 @@ class EDTopBlock( TopBlock ):
 	# @param moving_avg_size
 	# @param samp_rate
 	# @param device RadioDevice object
+	# @param algorithm
 	def __init__(self, addr, fft_size, moving_avg_size, samp_rate, device, algorithm):
 		## @TODO Flow graph should be constructed outside
 		#

@@ -20,11 +20,11 @@ Copyright 2013 OpERA
 from gnuradio import gr
 
 # Project imports
-from abstractSSArch   import AbstractSSArch
+from uhdAbstractArch import UHDAbstractArch
 
 ## Specific implementation of the AbstractSSArch for the UHD device.
 # This is the base class for all rx with spectrum sensing paths utilized in the TopBlock class.
-class UHDSSArch(AbstractSSArch, gr.hier_block2):
+class UHDSSArch(UHDAbstractArch):
 
 	## CTOR
 	# @param uhd              UHD Device
@@ -37,14 +37,7 @@ class UHDSSArch(AbstractSSArch, gr.hier_block2):
 			input_signature,
 			output_signature):
 
-		AbstractSSArch.__init__(self)
-
-		gr.hier_block2.__init__(self,
-				name = name,
-				input_signature  = input_signature,
-				output_signature = output_signature
-			)
-
+		UHDAbstractArch.__init__(self, name, input_signature, output_signature)
 		self._uhd = uhd
 
 	@property
@@ -57,3 +50,19 @@ class UHDSSArch(AbstractSSArch, gr.hier_block2):
 	# @param sensing_time Sensing duration on channel.
 	def sense_channel(self, the_channel, sensing_time):
 		return self._get_sensing_data( the_channel, sensing_time )
+
+
+
+	# retirado da antiga superclasse (abstractSSArch) ###
+	## Sense a list of channels.
+	# @param the_list     List of channels to sense.
+	# @param sensing_time Sensing duration in each channel.
+	# @return Sensing information of all channels.
+	def sense_channel_list(self, the_list, sensing_time):
+		data = []
+
+		for channel in the_list:
+			d = self.sense_channel(channel, sensing_time)
+			data.append(d)
+
+		return data

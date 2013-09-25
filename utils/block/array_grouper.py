@@ -71,6 +71,7 @@ class GroupInN(gr.sync_block):
 	def enable(self):
 		self._enable = True
 
+	## Check if grouping is enabled.
 	def is_enable(self):
 		return self._enable
 

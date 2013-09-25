@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 """
 Copyright 2013 OpERA
 
@@ -14,14 +16,13 @@ Copyright 2013 OpERA
   limitations under the License.
 """
 
-#!/usr/bin/env python
 
 import sys
 import os
 path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 sys.path.insert(0, path)
 
-from gnuradio  import gr
+from gnuradio  import gr, blocks
 from gnuradio.eng_option import eng_option
 from optparse  import OptionParser
 from struct    import * 
@@ -32,24 +33,28 @@ import random
 import numpy as np
 
 #from device.uhd import *
+from OpERAFlow import OpERAFlow
 from device             import *
 from algorithm.decision import EnergyDecision
 from utils.block        import *
 from reception.sensing  import EnergySSArch
+from reception.packet   import PacketGMSKRx, PacketOFDMRx
+from transmission       import PacketGMSKTx, PacketOFDMTx, SimpleTx
 from utils.sensing      import Channel, TopBlock, Logger, ChannelModeler
 
 ## Builds the US top block.
 # The RX path performs the ED sensing
 # The TX path transmits a BER 
+# @param options
 def build_us_block(options):
 	# TOP BLOCK
-	tb = TopBlock(name = 'TX BLOCK')
+	tb = OpERAFlow(name = 'US')
 
 	# RX PATH
 	if not options.tx_only:
 		uhd_source = UHDSource(device_addr = options.args)
 		uhd_source.samp_rate = 195512
-		device_source = RadioDevice(the_source = uhd_source, the_sink = gr.probe_signal_f() )
+		device_source = RadioDevice(the_source = uhd_source, the_sink = blocks.probe_signal_f() )
 
 		rx_path = EnergySSArch(
 				device = device_source,
@@ -57,29 +62,27 @@ def build_us_block(options):
 				mavg_size = 5,
 				algorithm = None
 				#algorithm = EnergyDecision( th = 0.00000001 )
-				)
-		tb.rx = UHDWrapper( device = device_source, algorithm = rx_path )
-		tb.connect( device_source.source, rx_path )
-
+			)
+		tb.add_path( abstract_arch = rx_path, radio_device = device_source, name_of_arch = 'rx')
 
 	# TX PATH
-	tx_path = PacketOFDMTx()
+	tx_path = PacketGMSKTx()
 
 	uhd_sink = UHDSink(device_addr = options.args)
 	uhd_sink.samp_rate = options.samp_rate
-	device_sink = RadioDevice( the_source = None, the_sink = uhd_sink, uhd_device = uhd_sink)
+	radio_sink = RadioDevice( the_source = blocks.multiply_const_cc(0.27), the_sink = uhd_sink, uhd_device = uhd_sink)
 
-	tb.tx = UHDWrapper( device = device_sink,   algorithm = tx_path )
-
-	tb.connect( tx_path, gr.multiply_const_cc(0.27), device_sink.sink )
+	tb.add_path( tx_path, radio_sink, 'tx', connection_type = OpERAFlow.CONN_SINK)
 
 	return tb
 
 ## Builds the UP top block.
 # The RX path performs the ED sensing AND BER reception
+# @param options
+# @param channel_list
 def build_up_block(options, channel_list):
 	# TOP BLOCK
-	tb = TopBlock(name = 'RX BLOCK')
+	tb = OpERAFlow(name = 'UP')
 
 	def rx_callback(ok, payload):
 		global t_rcv, t_cor
@@ -87,42 +90,42 @@ def build_up_block(options, channel_list):
 		t_rcv += 1
 		t_cor += 1 if ok else 0
 
-
 	def dist_callback():
 		return random.expovariate(1/5.0)
 
     # RX PATH
 	uhd_source = UHDSource(device_addr = options.args)
 	uhd_source.samp_rate = options.samp_rate
-	device_source = RadioDevice(the_source = uhd_source, the_sink = None)
+	radio_source = RadioDevice(the_source = uhd_source, the_sink = None)
 
-	rx_path = PacketOFDMRx( rx_callback )
-
-	tb.rx = UHDWrapper( device = device_source, algorithm = rx_path)
-	tb.connect( device_source.source, rx_path )
+	rx_path = PacketGMSKRx( rx_callback )
+	tb.add_path( rx_path, radio_source, 'rx' )
 
 
 	# TX PATH
 	if not options.tx_only:
 		uhd_sink = UHDSink(device_addr = options.args)
 		uhd_sink.samp_rate = 195512
-		device_sink = RadioDevice(
-				the_source = gr.vector_source_f(map(int, np.random.randint(0, 100, 1000)), True),
+		radio_sink = RadioDevice(
+				the_source = blocks.vector_source_f(map(int, np.random.randint(0, 100, 1000)), True),
 				the_sink = uhd_sink, uhd_device = uhd_sink
 			)
-
-		tx_path = simple_tx()
-		tb.tx = ChannelModeler(
-				device = UHDWrapper( device = device_sink, algorithm = None ),
+		radio_proxy = ChannelModeler(
+				device = radio_sink,
 				channel_list = channel_list,
 				dist_callback = dist_callback)
+		tx_path = SimpleTx()
 
-		tb.connect( device_sink.source, tx_path, gr.multiply_const_cc(3), device_sink.sink )
+		tb.add_path( tx_path, radio_proxy, 'tx')
 
 	return tb
 
 
 ## US LOOP
+# @param tb
+# @param channel_list
+# @param channel
+# @param options
 def transmitter_loop(tb, channel_list, channel, options):
 
 	# Connect to slave device
@@ -154,18 +157,20 @@ def transmitter_loop(tb, channel_list, channel, options):
 
 			# Update
 			print t_namespace.status
-			#if t_namespace.status > 0.000000005 : # GMSK threahold
-			if t_namespace.status > 0.000000005 :
+			if t_namespace.status > 0.000005 : # GMSK threahold
+			#if t_namespace.status > 0.000000005 :
 				print str(channel_list[ channel ]) +  ' is occupied'
 
 				t_now = time.clock()
 
+				## Q-NOISE AQUI.
 				channel = (channel + 1) % len(channel_list)
+				####
 				can_transmit = False
 
 				# Change channel
 				proxy.set_channel( channel )
-				tb.tx.center_freq = channel_list [ channel ]
+				tb.tx.radio.center_freq = channel_list [ channel ]
 
 				t_elapsed = time.clock() - t_now
 
@@ -184,6 +189,7 @@ def transmitter_loop(tb, channel_list, channel, options):
 				while t_namespace.pkt_sending:
 					tb.tx.send_pkt( payload )
 					t_namespace.pkt_s += 1
+					time.sleep(0.001)
 				#t_namespace.count += 1
 
 			# init thread
@@ -206,6 +212,10 @@ def transmitter_loop(tb, channel_list, channel, options):
 
 
 ## UP LOOP
+# @param tb
+# @param channel_list
+# @param channel
+# @param options
 def receiver_loop(tb, channel_list, channel, options):
 	import xmlrpclib
 	from SimpleXMLRPCServer import SimpleXMLRPCServer
@@ -230,7 +240,7 @@ def receiver_loop(tb, channel_list, channel, options):
 		def serve_forever(self):
 			while not self.stop:
 				self.handle_request()
-			print 'exiting server shit'
+			print 'exiting server'
 
 		def shutdown(self):
 			self.stop = True
@@ -248,8 +258,8 @@ def receiver_loop(tb, channel_list, channel, options):
 		print "Received command to handoff to channel  ", channel
 
 		if not g_namespace.options.tx_only:
-			g_namespace.tb.tx.center_freq = channel_list[ channel ]
-		g_namespace.tb.rx.center_freq = channel_list[ channel ]
+			g_namespace.tb.tx.radio.center_freq = channel_list[ channel ]
+		g_namespace.tb.rx.radio.center_freq = channel_list[ channel ]
 
 		g_namespace.interferer_channel = channel
 		return 1
@@ -277,7 +287,6 @@ def receiver_loop(tb, channel_list, channel, options):
 	print "Receiver listening for commands in port 8000"
 	print "\t... Waiting for client_started call"
 
-	tb.rx.gain = 19
 	while g_namespace.run == False:
 		1;
 	print "\t...client connected"
@@ -323,9 +332,9 @@ def main( options ):
 	if not options.interferer:
 		# initial frequencies
 		if not options.tx_only:
-			tb.rx.center_freq = channel_list[ channel ]
+			tb.rx.radio.center_freq = channel_list[ channel ]
 
-		tb.tx.center_freq = channel_list[ channel ]
+		tb.tx.radio.center_freq = channel_list[ channel ]
 		transmitter_loop(tb, channel_list, channel, options)
 	else:
 		global t_rcv
@@ -333,10 +342,10 @@ def main( options ):
 		t_rcv = 0
 		t_cor = 0
 
-		tb.rx.center_freq = channel_list[ channel ]
+		tb.rx.radio.center_freq = channel_list[ channel ]
 
 		if not options.tx_only:
-			tb.tx.center_freq = channel_list[ channel ]
+			tb.tx.radio.center_freq = channel_list[ channel ]
 		receiver_loop(tb, channel_list, channel, options)
 
 	time.sleep(1)
@@ -381,7 +390,7 @@ if __name__ == '__main__':
 	options.tx_only = options.mode == 'txonly'
 
 	print '#######################################'
-	print '# mode: ' + options.mode
+	print '# mode: ' + str(options.mode)
 	print '# ss  : ' + str(options.sensing_duration)
 	print '# sd  : ' + str(options.sending_duration)
 	print '#######################################'

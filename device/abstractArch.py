@@ -14,31 +14,15 @@ Copyright 2013 OpERA
   limitations under the License.
 """
 
-## @package algorithm
+## @package device
 
-## Interface to interact with a UHD and some other object 
-# 
-class UHDWrapper(object):
+# GNU Radio imports
+from gnuradio import gr
 
-	## CTOR
+## Abstract class for architetures
+# This is the base class for all the architetures
+class AbstractArch(object):
 	def __init__(self):
-		object.__setattr__(self, '_dict_of_archs', {})
+		pass
 
-	def add_path(self, abstract_arch, name_of_arch):
-		#abstract_arch must be an instance of some abstract architeture class.
 
-		self._dict_of_archs[name_of_arch] = abstract_arch
-
-		setattr(self, name_of_arch, abstract_arch)
-
-	def __setattr__ (self, name, val):
-		tmp = None
-
-		if name in self._dict_of_archs:
-			tmp = self._dict_of_archs[name]
-
-		if tmp:
-			setattr(UHDWrapper, name, tmp)
-			return 
-
-		raise AttributeError

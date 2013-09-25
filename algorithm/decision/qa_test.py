@@ -21,7 +21,7 @@ Copyright 2013 OpERA
 # ::TODO:: Discover how to include patches externally
 import sys
 import os
-path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..'))
+path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../'))
 sys.path.insert(0, path)
 
 import unittest

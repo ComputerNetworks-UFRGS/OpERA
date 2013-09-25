@@ -25,7 +25,7 @@ import shutil
 import unittest
 
 # ::TODO:: Discover how to include patches externally
-path = os.path.abspath(os.path.join(os.path.dirname(__file__),".."))
+path = os.path.abspath(os.path.join(os.path.dirname(__file__),"../../"))
 sys.path.insert(0, path)
 
 # UUT

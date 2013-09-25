@@ -21,32 +21,34 @@ Copyright 2013 OpERA
 # ::TODO:: Discover how to include patches externally
 import sys
 import os
-path = os.path.abspath(os.path.join(os.path.dirname(__file__),"../../../"))
+path = os.path.abspath(os.path.join(os.path.dirname(__file__),""))
 sys.path.insert(0, path)
 
 import unittest
 
 from gnuradio import blocks 
 
-from uhdWrapper import UHDWrapper
+from OpERAFlow import OpERAFlow
 
 # Other modules needed
-from radioDevice          import RadioDevice
+from device.radioDevice   import RadioDevice
 from algorithm.decision   import EnergyDecision
-from reception.sensing    import EDTopBlock
+from reception.sensing    import EnergySSArch
 
 ## Test algorithm 
 #
 
 class QaAlgorithm(unittest.TestCase):
 
-	## Test UHDWrapper
+	## Test OpERAFlow
 	def test_uhd_001(self):
-		uhd = UHDWrapper(device = None, algorithm = EnergyDecision(10))
+		algorithm = EnergyDecision(10)
+		opera = OpERAFlow("uhd_device")
+		opera.add_path(algorithm, None, "energy_decision")
 
-		self.assertEqual(uhd.threshold, 10)
-		uhd.threshold = 11
-		self.assertEqual(uhd.threshold, 11)
+		self.assertEqual(opera.energy_decision.threshold, 10)
+		opera.energy_decision.threshold = 11
+		self.assertEqual(opera.energy_decision.threshold, 11)
 
 	## Test UHDAlgorithm  with a EDTopblock
 	# In this test the energy outputed is greater than the threshold
@@ -60,19 +62,19 @@ class QaAlgorithm(unittest.TestCase):
 		device = RadioDevice(the_source = blocks.vector_source_c(data = arr, vlen = 1),
 				the_sink = blocks.probe_signal_f(), uhd_device = None )
 
-		ed = EDTopBlock(addr = "",
-				fft_size = len(arr),
-				moving_avg_size = 1,
-				samp_rate = 100e3,
+		ed = EnergySSArch(
 				device = device,
+				fft_size = len(arr),
+				mavg_size = 1,
 				algorithm = EnergyDecision(threshold)
 			)
 
-		uhd = UHDWrapper(device, ed)
-		uhd.run()
+		opera = OpERAFlow("ed_device")
+		opera.add_path(ed, device, "ed")
+		opera.run()
 
 		# Channel must be declared as occupied
-		self.assertEqual(expected_result , uhd.output)
+		self.assertEqual(expected_result , opera.ed.output)
 
 
 	## Test UHDAlgorithm  with a EDTopblock
@@ -87,18 +89,18 @@ class QaAlgorithm(unittest.TestCase):
 		device = RadioDevice(the_source = blocks.vector_source_c(data = arr, vlen = 1),
 				the_sink = blocks.probe_signal_f())
 
-		ed = EDTopBlock(addr = "",
-				fft_size = len(arr),
-				moving_avg_size = 1,
-				samp_rate = 100e3,
+		ed = EnergySSArch(
 				device = device,
+				fft_size = len(arr),
+				mavg_size = 1,
 				algorithm = EnergyDecision(threshold)
 			)
 
-		uhd = UHDWrapper(device, ed)
+		opera = OpERAFlow("ed_device")
+		opera.add_path(ed, device, "ed")
+		opera.run()
 
-		uhd.run()
-		self.assertEqual(expected_result , uhd.output)
+		self.assertEqual(expected_result , opera.ed.output)
 
 
 if __name__ == '__main__':

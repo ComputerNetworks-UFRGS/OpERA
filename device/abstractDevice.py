@@ -69,14 +69,14 @@ class AbstractDevice(object):
 	def samp_rate(self, samp_rate):
 		self._set_samp_rate( samp_rate )
 
-	# Device specific getter  for sample rate.
+	## Device specific getter  for sample rate.
 	# Must be implemented on derived classes.
 	# @return Sample rate
 	@abstractmethod
 	def _get_samp_rate(self):
 		pass
 
-	# Device specific setter  for sample rate.
+	## Device specific setter  for sample rate.
 	# Must be implemented on derived classes.
 	# @param samp_rate Sample rate.
 	@abstractmethod
@@ -90,7 +90,7 @@ class AbstractDevice(object):
 		self._gain = self._get_gain()
 		return self._gain
 
-	# Device specific getter for gain.
+	## Device specific getter for gain.
 	# Must be implemented on derived classes.
 	# @return Gain.
 	@abstractmethod
@@ -104,15 +104,9 @@ class AbstractDevice(object):
 		self._set_gain( gain )
 		self._gain = gain
 
-	# Device specific gain for sample rate.
+	## Device specific gain for sample rate.
 	# Must be implemented on derived classes.
-	# @param samp_rate gain.
+	# @param gain.
 	@abstractmethod
 	def _set_gain(self, gain):
 		pass
-
-## output
-	@property
-	@abstractmethod
-	def output(self):
-		raise NotImplementedError

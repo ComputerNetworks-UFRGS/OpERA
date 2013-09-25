@@ -19,10 +19,11 @@ Copyright 2013 OpERA
 ## @package architecture
 
 # ::TODO:: Discover how to include patches externally
+# ::TODO:: modules description
 import sys
 import os
 import random
-path = os.path.abspath(os.path.join(os.path.dirname(__file__),"../../.."))
+path = os.path.abspath(os.path.join(os.path.dirname(__file__),"../../"))
 sys.path.insert(0, path)
 
 
@@ -31,7 +32,7 @@ from math     import *
 from gnuradio import gr, gr_unittest, uhd, blocks
 
 # UUT
-from block    import GroupInN
+from utils.block    import GroupInN
 
 
 ## QA tests related to block utils

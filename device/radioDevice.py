@@ -30,11 +30,10 @@ class RadioDevice(AbstractDevice):
 		AbstractDevice.__init__(self)
 
 		self._source = the_source
-		self._sink	 = the_sink
-
+		self._sink = the_sink
 		self._uhd = uhd_device or the_source
 
-# source property
+	## source property
 	@property
 	def source(self):
 
@@ -45,7 +44,7 @@ class RadioDevice(AbstractDevice):
 
 		return self._source
 
-# sink property
+	## sink property
 	@property
 	def sink(self):
 
@@ -56,6 +55,7 @@ class RadioDevice(AbstractDevice):
 
 		return self._sink
 
+	## UHD property
 	@property
 	def uhd(self):
 		tmp = self._uhd
@@ -67,30 +67,32 @@ class RadioDevice(AbstractDevice):
 
 		return tmp
 
-# center_freq property
-	## @abstract
+	## Specific center frequency getter property for UHD devices
+	# @abstract
 	def _get_center_freq(self):
 		return self.uhd.get_center_freq()
 
-	## @abstract
+	## Specific center frequency setter property for UHD devices
+	# @abstract
 	def _set_center_freq(self, center_freq):
 		self.uhd.set_center_freq( center_freq )
 
-# samp_rate property
+	## Specific sample rate getter property for UHD devices
 	def _get_samp_rate(self):
 		return self.uhd.get_samp_rate()
 
+	## Specific sample rate setter property for UHD devices
 	def _set_samp_rate(self, samp_rate):
 		self.uhd.set_samp_rate( samp_rate )
 
-# gain property
+	## Specific gain getter property for UHD devices
 	def _get_gain(self):
 		return self.uhd.get_gain()
 
+	## Specific gain setter property for UHD devices
 	def _set_gain(self, gain):
 		self.uhd.set_gain( gain )
 
-# output property
 	@property
-	def output(self):
-		return self.sink.level()
+	def my_str(self):
+		return "it's handled"

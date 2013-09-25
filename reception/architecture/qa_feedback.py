@@ -19,11 +19,12 @@ Copyright 2013 OpERA
 ## @package device
 
 # ::TODO:: Discover how to include patches externally
+# ::TODO:: modules description
 import sys
 import os
 import random
 
-path = os.path.abspath(os.path.join(os.path.dirname(__file__),"../../../.."))
+path = os.path.abspath(os.path.join(os.path.dirname(__file__),"../../"))
 sys.path.insert(0, path)
 
 from gnuradio import blocks, gr_unittest, gr
@@ -47,10 +48,11 @@ from feedback import FeedbackTopBlock, FeedbackF
 ## QA tests related to feeback
 class QaFeedback(gr_unittest.TestCase):
 
+	##
 	def setUp(self):
 		self.tb = gr.top_block()
 
-
+	##
 	def tear_down(self):
 		self.tb = None
 
@@ -155,6 +157,7 @@ class QaFeedback(gr_unittest.TestCase):
 
 		# detectors utilized
 		bl = EnergyDetectorC( fft_size, 1, bl_algo )
+
 		ev = WaveformDetector( fft_size, WaveformDecision(0.7) )
 
 

@@ -26,8 +26,6 @@ import random
 path = os.path.abspath(os.path.join(os.path.dirname(__file__),"../"))
 sys.path.insert(0, path)
 
-
-
 from gnuradio import gr
 from gnuradio import blocks
 from gnuradio.eng_option import eng_option
@@ -39,14 +37,15 @@ from math      import *
 from optparse  import OptionParser
 
 # Project imports
-from device             import *
-from reception.sensing  import EnergyDetectorC
-from reception.sensing  import WaveformDetector 
-from utils.block        import *
-from reception.architecture   import FeedbackTopBlock, FeedbackF
+from OpERAFlow import OpERAFlow
+from device import *
+from reception.sensing import EnergyDetectorC
+from reception.sensing import WaveformDetector 
+from reception.architecture import FeedbackTopBlock, FeedbackF
 from algorithm.decision import BayesLearningThreshold, WaveformDecision
-from algorithm       import KunstTimeFeedback, FeedbackAlgorithm
-from utils.sensing   import Logger, TopBlock
+from algorithm import KunstTimeFeedback, FeedbackAlgorithm
+from utils.block import *
+from utils.sensing import Logger, TopBlock
 
 
 
@@ -73,9 +72,9 @@ def a_test(options, bayes_fft, feedback_algorithm):
 			k = k)
 	ev = WaveformDetector(bayes_fft, WaveformDecision(0.4) )
 
-	bd_detector = EnergyDecisionC(bayes_fft, 10, bl_algo)
+	bd_detector = EnergyDetectorC(bayes_fft, 10, bl_algo)
 
-	tb = FeedbackTopBlock(device = UHDWrapper(device = device_source, algorithm = None),
+	tb = FeedbackTopBlock(device = OpERAFlow(device = device_source, algorithm = None),
 			block_manager =  ev,
 			block_learner = bd_detector,
 			feedback_algorithm = FeedbackAlgorithm( bl_algo, feedback_algorithm )
@@ -103,10 +102,8 @@ def transmitter_loop(options):
 
 	tx_path = simple_tx()
 
-	tb = TopBlock("interferer")
-	tb.tx = UHDWrapper( device = device_sink, algorithm = None )
-	tb.connect( device_sink.source, tx_path, device_sink.sink )
-
+	tb = OpERAFlow("tx")
+	tb.add_path(abstract_arch = tx_path, radio_device = device_sink, name_of_arch = "device_sink")
 	tb.start()
 
 	start_t = time.time()

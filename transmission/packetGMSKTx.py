@@ -16,6 +16,8 @@ Copyright 2013 OpERA
 
 ## @package block_utils
 
+# ::TODO:: class and modules description
+
 from gnuradio     import gr, digital, blocks
 from grc_gnuradio import blks2 as grc_blks2
 
@@ -30,6 +32,8 @@ from device       import UHDTxPktArch
 ##
 #
 class PacketGMSKTx( UHDTxPktArch ):
+
+	## CTOR
 	def __init__(self):
 
 		UHDTxPktArch.__init__(
@@ -47,6 +51,3 @@ class PacketGMSKTx( UHDTxPktArch ):
 					bt = 0.35),
 				pad_for_usrp = False
 			)
-
-##
-#

@@ -16,15 +16,17 @@ Copyright 2013 OpERA
 
 ## @package device
 
+# ::TODO:: description of the class UHDTxPktArch
 from abc import ABCMeta, abstractmethod
 
 from gnuradio import gr
-from abstractTxPktArch import AbstractTxPktArch
+from uhdAbstractArch import UHDAbstractArch
 
-class UHDTxPktArch( AbstractTxPktArch, gr.hier_block2 ):
-	_tx = 0
+## Send data through USRP
+class UHDTxPktArch(UHDAbstractArch):
 
 	## CTOR
+	# @param name
 	# @param input_signature
 	# @param output_signature
 	def __init__(self,
@@ -32,22 +34,20 @@ class UHDTxPktArch( AbstractTxPktArch, gr.hier_block2 ):
 			input_signature,
 			output_signature):
 
-		AbstractTxPktArch.__init__(self)
-
-		gr.hier_block2.__init__(
-				self,
-				name = name,
-				input_signature  = input_signature,
-				output_signature = output_signature
-			)
-
+		UHDAbstractArch.__init__(self, name, input_signature, output_signature)
 		self._modulator = self._build()
 
 		# ::TODO::
 		# Connects based on input_signature and output_signature
-		self._connect(self._modulator, self)
+
+		if input_signature.min_streams():
+			self.connect(self, self._modulator)
+
+		if output_signature.min_streams():
+			self.connect(self._modulator, self)
 
 
+	## abstractmethod _build
 	@abstractmethod
 	def _build(self):
 		pass
@@ -55,3 +55,7 @@ class UHDTxPktArch( AbstractTxPktArch, gr.hier_block2 ):
 	## abstractTxPktArch abstract method.
 	def send_pkt(self, payload, eof = False):
 		self._modulator.send_pkt(payload, eof)
+
+	#### novo  - setar radio device #######
+	def set_radio_device(self, radio_device):
+		self._radio_device = radio_device

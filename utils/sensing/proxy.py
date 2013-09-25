@@ -16,7 +16,6 @@ Copyright 2013 OpERA
 
 # @package ss_utils
 
-
 ## Base class to implement the proxy design patter
 class Proxy(object):
 

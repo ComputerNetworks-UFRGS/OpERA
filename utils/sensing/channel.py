@@ -63,9 +63,8 @@ class Channel(object):
 class ChannelModel( Channel ):
 
 	## CTOR
-	# @param exp
-	# @param freq_idle
-	# @param freq_occupied
+	# @param idle_param
+	# @param occupied_param
 	# @param channel
 	def __init__(self, idle_param, occupied_param, channel):
 		Channel.__init__(self, ch = channel.channel, freq = channel.freq, bw = channel.bw)

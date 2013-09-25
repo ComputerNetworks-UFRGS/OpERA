@@ -21,12 +21,13 @@ Copyright 2013 OpERA
 # ::TODO:: Discover how to include patches externally
 import sys
 import os
-path = os.path.abspath(os.path.join(os.path.dirname(__file__),"../../../.."))
+path = os.path.abspath(os.path.join(os.path.dirname(__file__),"../.."))
 sys.path.insert(0, path)
 
 from gnuradio import gr, gr_unittest, fft, blocks
 
-from energyDetector         import EnergyDetectorC, EDTopBlock
+from OpERAFlow import OpERAFlow
+from energyDetector         import EnergyDetectorC, EnergySSArch, EDTopBlock
 from device.radioDevice     import RadioDevice
 from algorithm.decision      import EnergyDecision
 
@@ -37,7 +38,7 @@ class QaEnergyDetector(gr_unittest.TestCase):
 
 	## Set globals for all tests. Called before a test is started.
 	def setUp (self):
-		self.tb = gr.top_block ()
+		self.tb = OpERAFlow(name = 'top')
 
 	## Destroy globals for all tests. Called right after a test if finished.
 	def tear_down (self):
@@ -54,11 +55,13 @@ class QaEnergyDetector(gr_unittest.TestCase):
 		mavg_size = 1
 
 		src = blocks.vector_source_c(data = src_data)
-		ed = EnergyDetectorC(fft_size, mavg_size, EnergyDecision(1) )
 		dst = blocks.probe_signal_f()
+		radio_device = RadioDevice(the_source = src, the_sink = dst)
+
+		ed = EnergySSArch(radio_device, fft_size, mavg_size, EnergyDecision(1) )
 
 		## flowgraph
-		self.tb.connect (src, ed, dst)
+		self.tb.add_path(ed, radio_device, 'ed')
 		self.tb.run ()
 
 		result_data = dst.level ()
@@ -93,16 +96,17 @@ class QaEnergyDetector(gr_unittest.TestCase):
 
 		device = RadioDevice(blocks.vector_source_c(data = arr, vlen = 1), blocks.probe_signal_f())
 
-		ed = EDTopBlock(addr = "UHDSSArch",
-				fft_size = len(arr),
-				moving_avg_size = 8,
-				samp_rate = 100e3,
+		ed = EnergySSArch(
 				device = device,
+				fft_size = len(arr),
+				mavg_size = 8,
 				algorithm = EnergyDecision(expected_out - 1)
 			)
-		ed.run();
 
-		out = device.output
+		self.tb.add_path(ed, device, 'ed')
+		self.tb.run()
+
+		out = ed.output
 		self.assertEqual(1 , out)
 
 	## Test EDTopBlock with a simple input (1, 2, 3, 4)
@@ -112,16 +116,15 @@ class QaEnergyDetector(gr_unittest.TestCase):
 
 		device = RadioDevice(blocks.vector_source_c(data = arr, vlen = 1), blocks.probe_signal_f())
 
-		ed = EDTopBlock(addr = "",
-				fft_size = len(arr),
-				moving_avg_size = 1,
-				samp_rate = 100e3,
+		ed = EnergySSArch(
 				device = device,
+				fft_size = len(arr),
+				mavg_size = 1,
 				algorithm = EnergyDecision(expected_out + 1)
 			)
-		ed.run()
+		self.tb.add_path(ed, device, 'ed')
 
-		out = device.output
+		out = self.tb.ed.output
 		self.assertEqual(0, out)
 
 if __name__ == '__main__':

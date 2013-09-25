@@ -15,10 +15,10 @@ function startBoth()
 	echo "pkt size = $PKT_SIZE"
 	echo "mode = $MODE"
 
-	./ss_rank_tx.py --interferer --args addr=143.54.83.29 --log --mode $MODE --samp-rate 3e6 --duration $DURATION --pkt-size $PKT_SIZE --platform $PLATFORM --iteration $ITERATION --sending-duration $SENDING_DUR --sensing-duration $SENSING_DUR &
+	./ss_rank_tx.py --interferer --args addr=143.54.83.29 --log --mode $MODE --samp-rate 1e6 --duration $DURATION --pkt-size $PKT_SIZE --platform $PLATFORM --iteration $ITERATION --sending-duration $SENDING_DUR --sensing-duration $SENSING_DUR &
 
 	sleep 3
-	./ss_rank_tx.py --args addr=143.54.83.28 --log --mode $MODE --samp-rate 3e6 --duration $DURATION --pkt-size $PKT_SIZE --platform $PLATFORM --iteration $ITERATION --sending-duration $SENDING_DUR --sensing-duration $SENSING_DUR
+	./ss_rank_tx.py --args addr=143.54.83.28 --log --mode $MODE --samp-rate 1e6 --duration $DURATION --pkt-size $PKT_SIZE --platform $PLATFORM --iteration $ITERATION --sending-duration $SENDING_DUR --sensing-duration $SENSING_DUR
 	sleep 10
 	killall Python
 	killall python
@@ -27,23 +27,23 @@ function startBoth()
 
 for i in `seq 0 4`; do
 	echo ''
-	startBoth 60 32   $1 $i txonly 60 0.0
-	startBoth 60 64   $1 $i txonly 60 0.0
-	startBoth 60 128  $1 $i txonly 60 0.0
-	startBoth 60 256  $1 $i txonly 60 0.0
-	startBoth 60 512  $1 $i txonly 60 0.0
-	startBoth 60 1024 $1 $i txonly 60 0.0
-	startBoth 60 2048 $1 $i txonly 60 0.0
-	startBoth 60 4096 $1 $i txonly 60 0.0
-
-	startBoth 60 32   $1 $i ss 2 0.1
-	startBoth 60 64   $1 $i ss 2 0.1
-	startBoth 60 128  $1 $i ss 2 0.1
-	startBoth 60 256  $1 $i ss 2 0.1
-	startBoth 60 512  $1 $i ss 2 0.1
-	startBoth 60 1024 $1 $i ss 2 0.1
-	startBoth 60 2048 $1 $i ss 2 0.1
-	startBoth 60 4096 $1 $i ss 2 0.1
+	#startBoth 60 32   $1 $i txonly 60 0.0
+	#startBoth 60 64   $1 $i txonly 60 0.0
+	#startBoth 60 128  $1 $i txonly 60 0.0
+	#startBoth 60 256  $1 $i txonly 60 0.0
+	#startBoth 60 512  $1 $i txonly 60 0.0
+	#startBoth 60 1024 $1 $i txonly 60 0.0
+	#startBoth 60 2048 $1 $i txonly 60 0.0
+	#startBoth 60 4096 $1 $i txonly 60 0.0
+	#
+	#startBoth 60 32   $1 $i ss 2 0.1
+	#startBoth 60 64   $1 $i ss 2 0.1
+	#startBoth 60 128  $1 $i ss 2 0.1
+	#startBoth 60 256  $1 $i ss 2 0.1
+	#startBoth 60 512  $1 $i ss 2 0.1
+	#startBoth 60 1024 $1 $i ss 2 0.1
+	#startBoth 60 2048 $1 $i ss 2 0.1
+	#startBoth 60 4096 $1 $i ss 2 0.1
 
 	startBoth 60 32   $1 $i ss 2 0.5
 	startBoth 60 64   $1 $i ss 2 0.5

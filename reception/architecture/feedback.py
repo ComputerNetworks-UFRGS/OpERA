@@ -124,7 +124,7 @@ class FeedbackTopBlock(TopBlock):
 		"""
 		CTOR
 
-		@param device             Device ( a UHDWrapper object)
+		@param device             Device ( a OpERAFlow object)
 		@param block_manager      Sensing block that is considered always correct
 		@param block_learner      Sensing block which threshold is adjusted
 		@param feedback_algorithm Feedback Algorithm

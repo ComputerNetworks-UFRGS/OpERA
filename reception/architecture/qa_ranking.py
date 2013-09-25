@@ -19,11 +19,12 @@ Copyright 2013 OpERA
 ## @package architecture
 
 # ::TODO:: Discover how to include patches externally
+# ::TODO:: modules description
 import sys
 import os
 import random
 
-path = os.path.abspath(os.path.join(os.path.dirname(__file__),"../../../.."))
+path = os.path.abspath(os.path.join(os.path.dirname(__file__),"../../"))
 sys.path.insert(0, path)
 
 from gnuradio import gr, gr_unittest, uhd

@@ -25,6 +25,7 @@ from gnuradio import gr, gr_unittest, uhd
 
 import random
 
+
 # Project imports
 from device           import * 
 from algorithm        import QNoise, Chimas, decision
@@ -71,7 +72,7 @@ if __name__ == '__main__':
 		tx_path = simple_tx()
 
 		device = ChannelModeler(
-				device = UHDWrapper( device = device_sink, algorithm = None ),
+				device = OpERAFlow( device = device_sink, algorithm = None ),
 				channel_list = channel_list,
 				dist_callback = dist_callback)
 

@@ -21,19 +21,22 @@ from grc_gnuradio import blks2 as grc_blks2
 
 from device       import UHDTxPktArch
 
-class SimpleTx(gr.hier_block2):
+## A simple TX without source/sink
+class SimpleTx( UHDTxPktArch ):
 
 	## CTOR
-	# A simple TX without source/sink
 	def __init__(self):
-		gr.hier_block2.__init__(
+		UHDTxPktArch.__init__(
 				self,
 				name = 'simple_tx',
-				input_signature = gr.io_signature(1, 1, gr.sizeof_float),
+				input_signature  = gr.io_signature(1, 1, gr.sizeof_float),
 				output_signature = gr.io_signature(1, 1, gr.sizeof_gr_complex)
 			)
 
-		tx_mod = grc_blks2.packet_mod_f(
+
+
+	def _build(self):
+		return grc_blks2.packet_mod_f(
 				digital.ofdm_mod(
 					options=grc_blks2.options(
 						modulation="bpsk",
@@ -47,6 +50,3 @@ class SimpleTx(gr.hier_block2):
 					),
 				payload_length=0,
 			)
-		self.connect(self, tx_mod, self)
-
-

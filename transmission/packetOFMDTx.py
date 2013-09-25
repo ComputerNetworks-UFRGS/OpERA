@@ -16,6 +16,8 @@ Copyright 2013 OpERA
 
 ## @package block_utils
 
+# ::TODO:: class and modules description
+
 from gnuradio     import gr, digital, blocks
 from grc_gnuradio import blks2 as grc_blks2
 
