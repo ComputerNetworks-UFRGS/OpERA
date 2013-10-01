@@ -22,7 +22,8 @@ import os
 path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 sys.path.insert(0, path)
 
-from gnuradio  import gr, blocks
+from gnuradio  import gr
+from gnuradio import blocks
 from gnuradio.eng_option import eng_option
 from optparse  import OptionParser
 from struct    import * 
@@ -171,8 +172,6 @@ def transmitter_loop(tb, channel_list, channel, options):
 				# Change channel
 				proxy.set_channel( channel )
 				tb.tx.radio.center_freq = channel_list [ channel ]
-
-				t_elapsed = time.clock() - t_now
 
 		# Transmit
 		if can_transmit:

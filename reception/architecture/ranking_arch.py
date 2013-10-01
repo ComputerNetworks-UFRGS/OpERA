@@ -16,7 +16,9 @@ Copyright 2013 OpERA
 
 ## @package ssf
 
-from gnuradio                   import gr, fft
+from gnuradio                   import gr
+from gnuradio					import fft
+from gnuradio					import blocks
 from device                     import UHDSSArch
 from utils.sensing.top_block    import TopBlock
 from utils.block                import GroupInN
@@ -24,6 +26,7 @@ from algorithm                  import decision
 from reception.sensing          import EnergyCalculator
 
 import time
+import threading
 import numpy as np
 
 ## QLearning worker block
@@ -41,9 +44,10 @@ class QLearningWorker(gr.sync_block):
 				self,
 				name = "qlearning_worker",
 				in_sig =   [np.dtype((np.float32, vec_size))], 
-				out_sig =  [np.float32, np.float32]
+				out_sig =  [np.float32]
 			)
 		self.algorithm = algorithm
+
 
 	## GNU Radio main function.
 	# @param input_items
@@ -53,11 +57,9 @@ class QLearningWorker(gr.sync_block):
 
 		# Process input
 		energy = np.sum( in0 ) / in0.size
+		output_items[0][0] = energy
 
-		output_items[0][0] = self.algorithm.decision( energy )
-		output_items[1][0] = energy
-
-		return len( input_items )
+		return len(input_items)
 
 ## QLearning hierarchical block.
 # Builds flow graph from source to sync.
@@ -75,26 +77,21 @@ class SimpleRankingDetector(gr.hier_block2):
 				self,
 				name = "simple_ranking_detector",
 				input_signature =  gr.io_signature(1, 1, gr.sizeof_gr_complex),
-				output_signature = gr.io_signature(3, 3, gr.sizeof_float)
+				output_signature = gr.io_signature(1, 1, gr.sizeof_float)
 			)
 
 		# Blocks
 		# Convert the output of a FFT
-		self.s2v_0 = gr.stream_to_vector(gr.sizeof_gr_complex, fft_size) 
+		self.s2v_0 = blocks.stream_to_vector(gr.sizeof_gr_complex, fft_size) 
 		self.fft_0 = fft.fft_vcc(fft_size, True, [])
-		self.c2mag_0 = gr.complex_to_mag_squared(fft_size)
+		self.c2mag_0 = blocks.complex_to_mag_squared(fft_size)
 
 		# Instatiate the energy calculator
 		self.ql  = QLearningWorker(fft_size, algorithm = sensing.EnergyAlgorithm( ed_threshold ))
-
-		self.mavg = gr.moving_average_ff(mavg_size, 1.0/mavg_size)
+		self.mavg = blocks.moving_average_ff(mavg_size, 1.0/mavg_size)
 
 		# Flow graph
-		self.connect(self, self.s2v_0, self.fft_0, self.c2mag_0, self.ql)
-
-		self.connect((self.ql, 0), (self, 0))
-		self.connect((self.ql, 1), (self, 1))
-		self.connect(self.c2mag_0, EnergyCalculator(fft_size,  None),  self.mavg, EnergyCalculator(1,  sensing.EnergyAlgorithm(ed_threshold)), (self, 2))
+		self.connect(self, self.s2v_0, self.fft_0, self.c2mag_0, self.ql, self)
 
 
 ## Ranking architecture.
@@ -120,23 +117,15 @@ class RankingArch( UHDSSArch ):
 		self._grouper  = GroupInN(
 				group_vlen = group_vlen,
 				callback = None,
-				n_inputs = 3
+				n_inputs = 1
 			)
 
-		# inputs
-		self.connect( self, detector )
+		self._detector = detector
 
-		# process
-		self.connect( (detector, 0), (self._grouper, 0) )
-		self.connect( (detector, 1), (self._grouper, 1) )
-		self.connect( (detector, 2), (self._grouper, 2) )
+		# inputs
+		self.connect( self, detector, self._grouper)
 
 		# no outputs
-
-
-	## Enable the grouping of items
-	def enable_grouping(self):
-		self._grouper.enable()
 
 	## Configure the device to sense the given frequency.
 	# @param the_channel Channel object instance. Channel to sense.
@@ -147,33 +136,15 @@ class RankingArch( UHDSSArch ):
 		# Configure device center frequency
 		# ::TRICK:: self._device  can be a DeviceChannelModel object
 		#           If is the case, then check the DeviceChannelModel::center_freq method
-		self.uhd.center_freq = the_channel
-		self.enable_grouping()
-
-		return self._grouper.items
-
+		#self.uhd.center_freq = the_channel
+		self._grouper.set_enable( True )
 
 	## SS on a single channel
 	# Reimplement from UHDSSArch::sense_channel
 	# @param the_channel Channel to be sensed.
 	# @param sensing_time Sensing duration on channel.
 	def sense_channel(self, the_channel, sensing_time):
-
-		data = self._get_sensing_data( the_channel, sensing_time )
-
-		# Format to Leonardo implementation of qlearning.
-		# ::KLUDGE ::
-		tup_arr = []
-		rssi = 0
-		for tup in data:
-			tup_arr.append( ( tup[0], tup[1] ) )
-			rssi += tup[1]
-
-		print 'Sensing channel ', the_channel.channel, ' [ ', the_channel.freq, ' ]: RSSI= ', rssi/len(tup_arr)
-
-
-		# [channel, final_decision, [ (ch, rssi), (ch, rssi), ...]]
-		return [the_channel.channel, data[-1][0], tup_arr ]
+		self._get_sensing_data( the_channel, sensing_time )
 
 
 ## Ranking top block.

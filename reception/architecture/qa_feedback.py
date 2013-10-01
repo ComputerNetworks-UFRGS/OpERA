@@ -157,7 +157,6 @@ class QaFeedback(gr_unittest.TestCase):
 
 		# detectors utilized
 		bl = EnergyDetectorC( fft_size, 1, bl_algo )
-
 		ev = WaveformDetector( fft_size, WaveformDecision(0.7) )
 
 
@@ -167,7 +166,6 @@ class QaFeedback(gr_unittest.TestCase):
 				block_learner = bl,
 				feedback_algorithm = FeedbackAlgorithm( bl_algo, AlwaysTimeFeedback() ),
 			)
-
 		self.tb.run()
 
 		# As the waveform will (probably) not detected the channel as occupied, the feedback system should decrease the threshold by 1

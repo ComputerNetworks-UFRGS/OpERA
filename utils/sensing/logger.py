@@ -178,6 +178,7 @@ class Logger(object):
 		Logger.directory( direc, subdirec )
 
 		for name in Logger._history:
+			print 'Saving object:',  name
 			Logger.dump_obj( name = name,
 					data = Logger._history[ name ],
 					directory = direc + subdirec,
@@ -193,6 +194,7 @@ class Logger(object):
 		for d in data:
 			# Save list
 			if isinstance(data[d], list):
+				print '\titem: ', d, '[', len(data[d]) , ']'
 				# File name
 				fstr = '/' + name + '_' + d + ('_' + str( it ) if it != -1 else '') + '.txt'
 
@@ -201,6 +203,7 @@ class Logger(object):
 				fd.write('\n'.join(map(lambda x: str(x), data[d])) + "\n")
 			# Save global
 			else:
+				print '\titem: ', d
 				fstr = '/' + name + '_global'  + ('_' + str( it ) if it != -1 else '') + '.txt'
 
 				# Create file and dump all items

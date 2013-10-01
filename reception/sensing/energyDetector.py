@@ -22,10 +22,12 @@ Copyright 2013 OpERA
 from gnuradio import blocks, fft, gr
 
 import time
+import math
 import numpy as np
 
-from device                      import UHDSSArch
-from utils.sensing.top_block     import TopBlock
+from device					  import UHDSSArch
+from utils.sensing.top_block  import TopBlock
+from utils.sensing            import Logger
 
 ## Calculate the energy
 # Receives a vector of floats as inputs.
@@ -43,7 +45,10 @@ class EnergyCalculator(gr.sync_block):
 			)
 		self.algorithm = algorithm
 
-		self.cont = 0
+		Logger.register('energy_calculator', ['energy', 'decision' ] )
+
+
+		self._count = 0
 
 	## Calculate the energy
 	# @param	input_items	Input array with float values
@@ -55,6 +60,10 @@ class EnergyCalculator(gr.sync_block):
 		# Process input
 		energy = np.sum( np.square(in0) ) / (in0.size)
 		out0[0] = self.algorithm.decision( energy ) if self.algorithm else energy
+
+
+		Logger.append('energy_calculator', 'energy', energy)
+		Logger.append('energy_calculator', 'decision', out0[0])
 
 		return len( input_items )
 
@@ -101,16 +110,14 @@ class EnergySSArch( UHDSSArch ):
 
 		UHDSSArch.__init__(
 			self,
-			uhd              = device,
-			name             = "EnergySSArch",
+			uhd				 = device,
+			name			 = "EnergySSArch",
 			input_signature  = gr.io_signature(1, 1, gr.sizeof_gr_complex),
 			output_signature = gr.io_signature(1, 1, gr.sizeof_float),
 		)
 
 
-		#      #
-		# Flow #
-		#      #
+		# Flow
 		self._detector = EnergyDetectorC(
 				fft_size  = fft_size,
 				mavg_size = mavg_size,
@@ -131,7 +138,7 @@ class EnergySSArch( UHDSSArch ):
 	def _get_sensing_data(self, the_channel, sensing_time):
 		# Configure device center frequency
 		# ::TRICK:: self._device  can be a DeviceChannelModel object
-		#           If is the case, then check the DeviceChannelModel::center_freq method
+		#		   If is the case, then check the DeviceChannelModel::center_freq method
 		self.uhd.center_freq = the_channel
 
 		# Sleep for sensing_time
@@ -159,11 +166,9 @@ class EDTopBlock( TopBlock ):
 	# @param algorithm
 	def __init__(self, addr, fft_size, moving_avg_size, samp_rate, device, algorithm):
 		## @TODO Flow graph should be constructed outside
-		#
 		TopBlock.__init__(self, "Energy Detector Blocks")
 
 		ed = EnergyDetectorC(fft_size, moving_avg_size, algorithm)
 		self.connect(device.source, ed, device.sink)
-		#
-		##
+
 		self.rx = ed

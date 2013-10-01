@@ -50,11 +50,9 @@ class QaAlgorithm(unittest.TestCase):
 
 		# Estado inicial
 		self.assertEqual(False, obj.feedback() )
-		
-		obj.wait() # wait = 0
+		obj.wait() # wait = 1
 
-		# 3 ^ 0 == 1 (demos 1 wait)
-		# wait volta para 0
+		# 3 ^ 0 == 1 (wait is 1)
 		self.assertEqual(True, obj.feedback() )
 
 		# Testa se voltou direito

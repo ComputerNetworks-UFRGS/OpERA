@@ -41,59 +41,44 @@ class GroupInN(gr.sync_block):
 				name = 'array_grouper',
 				in_sig = [ np.float32 ] * n_inputs,
 				out_sig = None
-			)
+		)
 
-		self._enable   = True
+		self._enable   = False
 		self._max_vlen = group_vlen
 		self._callback = callback
 		self._ninputs  = n_inputs
 
 		self._item_group = []
 
-	## Return grouped items.
-	# @return Grouped items.
-	@property
-	def items(self):
+		self._callback = None
 
-		# Wait until  all items are grouped (if enought items have not been received)
-		print 'entering grouper loop'
-		while self._enable:
-			1
-		print 'exiting grouper loop'
+	##
+	#
+	def set_callback(self, callback):
+		self._callback = callback
 
-		# clear current _item_group
-		tmp = self._item_group
-		self._item_group = []
 
-		return tmp 
-
-	## Enable grouping.
-	def enable(self):
-		self._enable = True
-
-	## Check if grouping is enabled.
-	def is_enable(self):
-		return self._enable
+	## Enable/Disable grouping.
+	def set_enable(self, val):
+		self._enable = val
 
 	## GNU Radio main function.
 	# The items are received and grouped in this function.
 	def work(self, input_items, output_items):
-
-		# Group data if enable
-		if (self._enable == True) and ((len(self._item_group) < self._max_vlen) or self._max_vlen == -1):
-
+		if self._enable and len(self._item_group) < self._max_vlen:
 			# this code create the tuple of items
 			# items cannot be appended to tuples, so we need to change it in a loop
-			self._item_group.append( (input_items[0][0], ) )
-			for i in xrange(1, self._ninputs ):
-				self._item_group[-1] = self._item_group[-1] + (input_items[i][0], ) 
+			if self._ninputs == 1:
+				self._item_group.append( input_items[0][0] )
+			else:
+				self._item_group.append( (input_items[0][0],) )
+				for i in xrange(1, self._ninputs ):
+					self._item_group[-1] = self._item_group[-1] + (input_items[i][0], ) 
 
 			# Grouped all items ?
-			if len(self._item_group) >= self._max_vlen and self._max_vlen > 0:
-				self._enable = False
-
+			if len(self._item_group) >= self._max_vlen:
 				if self._callback:
-					self._callback()
+					self._callback(self, self._item_group)
+					self._item_group = []
 
-		# One input is consumed at a time
-		return 1 
+		return len(input_items)

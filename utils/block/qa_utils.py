@@ -42,53 +42,56 @@ class QaUtils(gr_unittest.TestCase):
 	def setUp(self):
 		self.tb = gr.top_block()
 
+
 	##
 	def tear_down(self):
 		self.tb = None
 
+
 	## Test if the group_in_n  is able to group a single input
 	# In this test the number os total grouped itens is 1
 	def test_001(self):
-		arr = [1.0]
+		arr = [1.0, 1.0, 1.0]
 		expected_result = [(1, 1, 1)]
 
 		grouper_vlen = len(expected_result) + 1 # +1 to not activate the callback
 
 		src = blocks.vector_source_f( data = arr , vlen = 1)
 		grouper = GroupInN( group_vlen = 1, callback = None,  n_inputs = 3 )
+		grouper.set_enable( True )
 
 		self.tb.connect( src, (grouper, 0))
 		self.tb.connect( src, (grouper, 1))
 		self.tb.connect( src, (grouper, 2))
 		self.tb.run()
 
-		result_data = grouper.items
+		result_data = grouper._item_group
 
-		# Verify expected result AND if the grouper is disable (should group only 1 input)
+		# Verify expected result 
 		self.assertEqual(expected_result, result_data)
-		self.assertEqual(False, grouper._enable)
+
 
 	## Test if the group_in_n  is able to group a single input
 	# In this test the number os total grouped itens is 1
 	def test_002(self):
-		arr = [1.0, 2.0]
+		arr = [1.0, 1.0, 1.0, 2.0, 2.0, 2.0]
 		expected_result = [(1, 1, 1), (2, 2, 2)]
 
 		grouper_vlen = len(expected_result) + 1 # +1 to not activate the callback
 
-		src = blocks.vector_source_f( data = arr , vlen = 1)
+		src = blocks.vector_source_f( data = arr , vlen = 1, repeat = False )
 		grouper = GroupInN( group_vlen = 2, callback = None,  n_inputs = 3 )
+		grouper.set_enable( True )
 
 		self.tb.connect( src, (grouper, 0))
 		self.tb.connect( src, (grouper, 1))
 		self.tb.connect( src, (grouper, 2))
 		self.tb.run()
 
-		result_data = grouper.items
+		result_data = grouper._item_group
 
-		# Verify expected result AND if the grouper is disable (should group only 1 input)
+		# Verify expected result
 		self.assertEqual(expected_result, result_data)
-		self.assertEqual(False, grouper._enable)
 
 
 if __name__ == '__main__':

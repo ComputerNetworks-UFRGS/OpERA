@@ -36,7 +36,7 @@ class FeedbackAlgorithm(AbstractAlgorithm):
 		self._time = 0
 
 		# Debug information
-		Logger.register('feedback_algorithm', ['activations', 'count', 'time'])
+		Logger.register('feedback_algorithm', ['total_feedback', 'activation', 'count', 'time'])
 
 
 	## Return the learning algorithm
@@ -65,7 +65,8 @@ class FeedbackAlgorithm(AbstractAlgorithm):
 		if self.strategy.feedback():
 			self._time += 19.3
 			self._count += 1
-			Logger.set('feedback_algorithm', 'activations', self._count)
+			Logger.set('feedback_algorithm', 'total_feedback', self._count)
+			Logger.append('feedback_algorithm', 'activation', int(data_m))
 
 			# set feeback in our learning algorithm
 			self.learner.feedback = data_m
@@ -77,10 +78,11 @@ class FeedbackAlgorithm(AbstractAlgorithm):
 			else:
 				self.strategy.decrease_time()
 		else:
+			Logger.append('feedback_algorithm', 'activation', -1)
 			self._time += 0.2
 
-		Logger.append('feedback_algorithm', 'time', (self._iteraction, self._time))
-		Logger.append('feedback_algorithm', 'count', (self._iteraction, self._count))
+		Logger.append('feedback_algorithm', 'time', self._time)
+		Logger.append('feedback_algorithm', 'count', self._count)
 
 
 
@@ -205,8 +207,8 @@ class KunstTimeFeedback( ExponentialTimeFeedback ):
 	def __init__(self):
 		ExponentialTimeFeedback.__init__(self,
 				min_time = 1,
-				max_time = 64,
-				base = 1.5) 
+				max_time = 256,
+				base = 2) 
 
 	## Inherit from parent
 	def decrease_time(self):

@@ -37,9 +37,7 @@ class BayesLearningThreshold(AbstractAlgorithm):
 			max_th,
 			delta_th,
 			k):
-		Logger.register('bayes_learning', ['threshold', 'hiphotesis', 'real_state', 'feedback', 'risk', 'pd', 'pf', 'pm', '00', '01', '11', '10'] )
-
-		Logger.register('bayes_analyzer', ['energy'])
+		Logger.register('bayes_learning', ['threshold', 'energy', 'hiphotesis', 'real_state', 'feedback', 'risk', 'pd', 'pf', 'pm', '00', '01', '11', '10'] )
 
 		# Initialize data structures
 		self._p  = {}
@@ -327,14 +325,10 @@ class BayesLearningThreshold(AbstractAlgorithm):
 		Logger.append('bayes_learning', 'feedback', self.feedback)
 		Logger.append('bayes_learning', 'real_state', Logger._ch_status)
 		Logger.append('bayes_learning', 'risk', self._r[self._th])
-		Logger.append('bayes_analyzer', 'energy', energy)
+		Logger.append('bayes_learning', 'energy', energy)
 
 		Logger.append('bayes_learning', 'pd', self._pd[self._th])
 		Logger.append('bayes_learning', 'pf', self._pf[self._th])
 		Logger.append('bayes_learning', 'pm', self._pm[self._th])
-		Logger.set('bayes_learning', '11', self._cSum['11'])
-		Logger.set('bayes_learning', '00', self._cSum['00'])
-		Logger.set('bayes_learning', '10', self._cSum['10'])
-		Logger.set('bayes_learning', '01', self._cSum['01'])
 
 		return 1 if bayes_hip > 0 else 0

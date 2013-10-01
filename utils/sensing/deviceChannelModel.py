@@ -55,18 +55,15 @@ class ChannelThread(threading.Thread):
 
 		# 0 = idle
 		# 1 = occupied
-		status = random.randrange(0, 2, 1)
+		status = 1
 
 		# Thread loop
 		while ChannelThread._running:
 			# if this thread is controlling the device
-			if self._active:
-				if status:
-					print 'Interfering in channel ' + str(self._the_channel)
-					self._the_device.center_freq = self._the_channel.freq
-				else:
-					print 'Setted outside range ' + str(self._the_channel)
-					self._the_device.center_freq = 2.0e9
+			if status:
+				self._the_device.center_freq = self._the_channel.freq
+			else:
+				self._the_device.center_freq = 2.2e9
 
 			if self._active:
 				time.sleep( self._dist_callback() )
@@ -75,8 +72,6 @@ class ChannelThread(threading.Thread):
 
 			# Change status betweeen idle <-> occupied
 			status = (status+1) % 2
-
-		print 'Thread finished'
 
 
 	## Enable/disable thread control of USRP

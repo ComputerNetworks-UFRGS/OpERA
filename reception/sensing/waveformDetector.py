@@ -39,8 +39,8 @@ class WaveformAnalyzer(gr.sync_block):
 
 		self.algorithm = algorithm
 
-		# Debug
-		Logger.register('WaveformAnalyzer', ['decision'])
+
+		Logger.register('waveform', ['decision', ])
 
 
 	## Process inputs.
@@ -50,12 +50,11 @@ class WaveformAnalyzer(gr.sync_block):
 		in0 = input_items[0]
 		out0 = output_items[0]
 
-		out0[:] = self.algorithm.decision( in0[0] )
+		out0[0] = self.algorithm.decision( in0[0] )
 
-		# Debug
-		Logger.append('WaveformAnalyzer', 'decision', out0[0])
+		Logger.append('waveform', 'decision', out0[0])
 
-		return len(in0)
+		return len(input_items)
 
 
 
@@ -81,7 +80,6 @@ class WaveformDetector(gr.hier_block2):
 		self.c2mag_0 = blocks.complex_to_mag_squared(fft_size)
 
 		self.wd = WaveformAnalyzer(fft_size, algorithm)
-
 
 		self.connect(self, self.s2v_0, self.fft_0, self.c2mag_0, self.wd, self)
 
