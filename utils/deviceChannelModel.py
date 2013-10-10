@@ -49,36 +49,46 @@ class ChannelThread(threading.Thread):
 		self._dist_callback = dist_callback
 
 		self._active = False
+		self._status = random.randrange(1, 3)
+
+
+	## Thread set frequency 
+	def _set_frequency(self):
+
+		# sanity check
+		if not self._active:
+			return
+
+		print "Channel ", self._the_channel.channel, " is ", self._status
+
+		if self._status:
+			self._the_device.center_freq = self._the_channel.freq
+		else:
+			self._the_device.center_freq = 1e9
+
 
 	## Channel Thread thread
 	def run(self):
 
-		# 0 = idle
-		# 1 = occupied
-		status = 1
-
 		# Thread loop
+		#_now = time.time()
 		while ChannelThread._running:
 			# if this thread is controlling the device
-			if status:
-				self._the_device.center_freq = self._the_channel.freq
-			else:
-				self._the_device.center_freq = 2.2e9
-
 			if self._active:
-				time.sleep( self._dist_callback() )
-			else:
-				time.sleep( 0.1 )
+				self._set_frequency()
 
-			# Change status betweeen idle <-> occupied
-			status = (status+1) % 2
-
+			#print 'Channel %d is going to %d after %f' % (self._the_channel.channel, self._status, time.time() - t_now)
+			#_now = time.time()
+			time.sleep( self._dist_callback(self._the_channel, self._status) )
+			self._status = (self._status+1) % 2
 
 	## Enable/disable thread control of USRP
 	# @param value True or False
-	def active(self, value):
-		self._active = value
+	def active(self, act):
+		self._active = act
 
+		if self._active:
+			self._set_frequency()
 
 ## Proxy calls an AbstractDevice object.
 # This class is used to 'fake' channel changes by intercepting the 'center_freq' call.
@@ -123,11 +133,11 @@ class ChannelModeler(object):
 	# @param chann ChannelModel object
 	# @param the_semaphore stays here until the semaphore is freed
 	def center_freq(self, channel):
-		print 'Channel Modeler'
+		print '$$$$$$$$$$$$$$$$$$$$$$$  new channel is ', channel.channel
 		the_thread = self._threads[ channel ]
 
-		self._disable_thread( self._curThread )                         # disable current thread
-		self._enable_thread( the_thread )      # activate it
+		self._disable_thread( self._curThread )            # disable current thread
+		self._enable_thread( the_thread )                  # activate it
 		object.__setattr__(self, '_curThread', the_thread) # set new current thread based on channel value
 
 	## Python way to proxy a object.

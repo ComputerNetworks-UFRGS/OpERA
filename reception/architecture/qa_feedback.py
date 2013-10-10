@@ -36,11 +36,11 @@ import matplotlib.pyplot as plt
 
 
 # Project imports
-from device                     import RadioDevice
-from utils.sensing              import Logger
-from algorithm                  import BayesLearningThreshold, WaveformDecision, FeedbackAlgorithm, AlwaysTimeFeedback
-from reception.sensing          import EnergyDetectorC
-from reception.sensing          import WaveformDetector 
+from device import RadioDevice
+from utils  import Logger
+from algorithm import BayesLearningThreshold, WaveformDecision, FeedbackAlgorithm, AlwaysTimeFeedback
+from reception.sensing import EnergyDetectorC
+from reception.sensing import WaveformDetector 
 
 # UUT
 from feedback import FeedbackTopBlock, FeedbackF

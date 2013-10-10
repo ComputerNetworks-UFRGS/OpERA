@@ -31,13 +31,8 @@ class UHDSSArch(UHDAbstractArch):
 	# @param name             SS Arch instance name
 	# @param input_signature  A gr.io_signature instance.
 	# @param output_signature A gr.io_signature instance.
-	def __init__(self,
-			uhd,
-			name,
-			input_signature,
-			output_signature):
-
-		UHDAbstractArch.__init__(self, name, input_signature, output_signature)
+	def __init__(self, uhd, name, input_signature, output_signature):
+		UHDAbstractArch.__init__(self, name=name, input_signature=input_signature, output_signature=output_signature)
 		self._uhd = uhd
 
 	@property

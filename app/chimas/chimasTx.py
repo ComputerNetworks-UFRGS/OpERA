@@ -37,11 +37,37 @@ import numpy as np
 from OpERAFlow import OpERAFlow
 from device             import *
 from algorithm.decision import EnergyDecision
-from gr_blocks          import *
+from utils.block        import *
 from reception.sensing  import EnergySSArch
-from reception.packet   import PacketGMSKRx, PacketOFDMRx
-from transmission       import PacketGMSKTx, PacketOFDMTx, SimpleTx
-from utils	        import Channel, TopBlock, Logger, ChannelModeler
+from reception.packet   import PacketGMSKRx, PacketGMSKRx
+from transmission       import PacketGMSKTx, PacketGMSKTx, SimpleTx
+from utils.sensing      import Channel, TopBlock, Logger, ChannelModeler
+
+
+import qnoise
+def dump_qlearner(it, ss_result, noise_w):
+
+	direc = "./chimas_tx/gain_1_noise_weight_%0.2f" % (noise_w)
+	if not os.path.exists( direc ):
+		os.makedirs( direc ) 
+
+	fname = "%s//ss_result_%d.txt" % (direc, it)
+
+	tmp = []
+	for c, d in ss_result.items():
+		tmp.append( [d[2], c, d[0], d[1]] )
+	tmp.sort()
+
+	with open(fname, 'w') as fd:
+		fd.write("ss_channel sinr decision qvalue\n")
+		for channel_data in reversed(tmp):
+
+			qvalue   = channel_data[0]
+			channel  = channel_data[1]
+			sinr     = channel_data[2]
+			decision = channel_data[3]
+
+			fd.write("{0} {1} {2} {3}\n".format(channel, sinr, decision, qvalue) )
 
 ## Builds the US top block.
 # The RX path performs the ED sensing
@@ -52,27 +78,25 @@ def build_us_block(options):
 	tb = OpERAFlow(name = 'US')
 
 	# RX PATH
-	if not options.tx_only:
-		uhd_source = UHDSource(device_addr = options.args)
-		uhd_source.samp_rate = 195512
-		device_source = RadioDevice(the_source = uhd_source, the_sink = blocks.probe_signal_f() )
+	uhd_source = UHDSource(device_addr = options.args)
+	uhd_source.samp_rate = 195512
+	device_source = RadioDevice(the_source = uhd_source, the_sink = blocks.probe_signal_f() )
 
-		rx_path = EnergySSArch(
-				device = device_source,
-				fft_size  = 512,
-				mavg_size = 5,
-				algorithm = None
-				#algorithm = EnergyDecision( th = 0.00000001 )
-			)
-		tb.add_path( abstract_arch = rx_path, radio_device = device_source, name_of_arch = 'rx')
+	rx_path = EnergySSArch(
+			device = device_source,
+			fft_size  = 512,
+			mavg_size = 5,
+			algorithm = None
+			#algorithm = EnergyDecision( th = 0.00000001 )
+		)
+	tb.add_path( abstract_arch = rx_path, radio_device = device_source, name_of_arch = 'rx')
 
 	# TX PATH
 	tx_path = PacketGMSKTx()
 
 	uhd_sink = UHDSink(device_addr = options.args)
 	uhd_sink.samp_rate = options.samp_rate
-	radio_sink = RadioDevice( the_source = blocks.multiply_const_cc(0.27), the_sink = uhd_sink, uhd_device = uhd_sink)
-
+	radio_sink = RadioDevice( the_source = None, the_sink = uhd_sink, uhd_device = uhd_sink)
 	tb.add_path( tx_path, radio_sink, 'tx', connection_type = OpERAFlow.CONN_SINK)
 
 	return tb
@@ -87,12 +111,20 @@ def build_up_block(options, channel_list):
 
 	def rx_callback(ok, payload):
 		global t_rcv, t_cor
+		global g_namespace
 
 		t_rcv += 1
 		t_cor += 1 if ok else 0
 
-	def dist_callback():
-		return random.expovariate(1/5.0)
+   		g_namespace.pkt_r += 1
+		#print 'r: ', g_namespace.pkt_r
+
+
+	def dist_callback(channel, status):
+		if status:
+			return 1.0;
+		else:
+			return channel.channel*0.25
 
     # RX PATH
 	uhd_source = UHDSource(device_addr = options.args)
@@ -104,20 +136,20 @@ def build_up_block(options, channel_list):
 
 
 	# TX PATH
-	if not options.tx_only:
-		uhd_sink = UHDSink(device_addr = options.args)
-		uhd_sink.samp_rate = 195512
-		radio_sink = RadioDevice(
-				the_source = blocks.vector_source_f(map(int, np.random.randint(0, 100, 1000)), True),
-				the_sink = uhd_sink, uhd_device = uhd_sink
-			)
-		radio_proxy = ChannelModeler(
-				device = radio_sink,
-				channel_list = channel_list,
-				dist_callback = dist_callback)
-		tx_path = SimpleTx()
+	uhd_sink = UHDSink(device_addr = options.args)
+	uhd_sink.samp_rate = 195512
+	uhd_sink.gain = 28
+	radio_sink = RadioDevice(
+			the_source = blocks.vector_source_f(map(int, np.random.randint(0, 100, 1000)), True),
+			the_sink = uhd_sink, uhd_device = uhd_sink
+		)
+	radio_proxy = ChannelModeler(
+			device = radio_sink,
+			channel_list = channel_list,
+			dist_callback = dist_callback)
+	tx_path = SimpleTx()
 
-		tb.add_path( tx_path, radio_proxy, 'tx')
+	tb.add_path( tx_path, radio_proxy, 'tx')
 
 	return tb
 
@@ -128,6 +160,18 @@ def build_up_block(options, channel_list):
 # @param channel
 # @param options
 def transmitter_loop(tb, channel_list, channel, options):
+
+	# Q-Noise+ Parameters
+	lookback = 3
+	beta = 0.1
+	eps = 0.1
+
+	history_weight = [0.2, 0.35, 0.45]
+	noise_weight = 0.8
+	alpha = 0.2  # alpha + noise+weith = 1
+	epochs = 100
+	#Q-Noise+
+	learner = qnoise.Learner(channel_list, lookback, alpha, beta, eps, history_weight, noise_weight)
 
 	# Connect to slave device
 	import xmlrpclib
@@ -147,31 +191,36 @@ def transmitter_loop(tb, channel_list, channel, options):
 	t_namespace = TNamespace()
 	t_namespace.pkt_s = 0
 	t_namespace.status = 0
+	t_namespace.iteration = 0
 
+	
+	t_namespace.ss_result = {}
+	for ch in channel_list:
+		t_namespace.ss_result[ ch.channel ] = [0, 0, 0]
 
+	ch_qvalue = 0
 	while time.time() < (start_t + options.duration):
 		can_transmit = True
 
-		if not options.tx_only:
-			# Sense
-			t_namespace.status =  tb.rx.sense_channel(channel_list[channel], options.sensing_duration )
 
-			# Update
-			print t_namespace.status
-			if t_namespace.status > 0.000005 : # GMSK threahold
-			#if t_namespace.status > 0.000000005 :
-				print str(channel_list[ channel ]) +  ' is occupied'
+		t_namespace.pkt_r = t_namespace.pkt_s = 0
 
-				t_now = time.clock()
+		# Sense
+		print '### START SENSING CHANNEL'
+		t_namespace.status =  tb.rx.sense_channel(channel_list[channel], options.sensing_duration )
 
-				## Q-NOISE AQUI.
-				channel = (channel + 1) % len(channel_list)
-				####
-				can_transmit = False
+		# Update
+		#print t_namespace.status
+		if t_namespace.status > 0.000005 : # GMSK threahold
+		#if t_namespace.status > 0.000000005 :
+			print str(channel_list[ channel ]) +  ' is occupied'
 
-				# Change channel
-				proxy.set_channel( channel )
-				tb.tx.radio.center_freq = channel_list [ channel ]
+			t_now = time.clock()
+
+			can_transmit = True
+
+			# Change channel
+			#proxy.set_channel( channel )
 
 		# Transmit
 		if can_transmit:
@@ -185,27 +234,49 @@ def transmitter_loop(tb, channel_list, channel, options):
 
 			# thred sending packets
 			def send_thread():
-				while t_namespace.pkt_sending:
+				t_namespace.pkt_s = 0
+				#while t_namespace.pkt_sending:
+				while t_namespace.pkt_s < 200:
 					tb.tx.send_pkt( payload )
 					t_namespace.pkt_s += 1
-					time.sleep(0.001)
+					#print 't: ', t_namespace.pkt_s
+					time.sleep(0.03)
 				#t_namespace.count += 1
 
 			# init thread
 			th = Thread( target = send_thread )
+ 			proxy.start_rcv()
 			t_namespace.pkt_sending = True
 			th.start()
 
 			# wait for options.sending_duration 
-			time.sleep( options.sending_duration )
+			#time.sleep( options.sending_duration )
 
 			# stop sending
 			t_namespace.pkt_sending = False
 			th.join()
 
+ 			t_namespace.pkt_r = proxy.get_rcv()
+
+			print 'pkt_s = ', t_namespace.pkt_s
+			print 'pkt_r = ', t_namespace.pkt_r
+
+
+		ch_qvalue = learner.evaluate(channel_list[channel].channel, t_namespace.pkt_s, t_namespace.pkt_r, t_namespace.status)
+
+		t_namespace.ss_result[channel+1] = [t_namespace.status, 0 if can_transmit else 1, ch_qvalue]
+		channel = learner.chooseNextChannel(channel_list[channel].channel) - 1 # -1 cause we use the index in the array.
+		print "Using channel  ", channel_list[channel]
+		proxy.set_channel( channel )
+		tb.tx.radio.center_freq = channel_list [ channel ]
+
 		Logger.append('transmitter', 'channel',  channel)
 		Logger.append('transmitter', 'status',   t_namespace.status)
 		Logger.append('transmitter', 'pkt',      t_namespace.pkt_s)
+
+		dump_qlearner(t_namespace.iteration, t_namespace.ss_result, noise_weight)
+		t_namespace.iteration += 1
+
 
 	proxy.close_app()
 
@@ -222,7 +293,7 @@ def receiver_loop(tb, channel_list, channel, options):
 	class MyNamespace:
 		pass
 
-
+	global g_namespace
 	g_namespace = MyNamespace()
 	g_namespace.tb = tb
 	g_namespace.options = options
@@ -254,11 +325,9 @@ def receiver_loop(tb, channel_list, channel, options):
 
     # RPC para troca do canal
 	def set_channel(channel):
-		print "Received command to handoff to channel  ", channel
-
-		if not g_namespace.options.tx_only:
-			g_namespace.tb.tx.radio.center_freq = channel_list[ channel ]
+		print "Received command to handoff to channel  ", channel_list[channel]
 		g_namespace.tb.rx.radio.center_freq = channel_list[ channel ]
+		g_namespace.tb.tx.radio.center_freq = channel_list[ channel ]
 
 		g_namespace.interferer_channel = channel
 		return 1
@@ -274,6 +343,13 @@ def receiver_loop(tb, channel_list, channel, options):
 		g_namespace.run = True
 		return 1
 
+	def start_rcv():
+		g_namespace.pkt_r = 0;
+		return 1;
+ 
+	def get_rcv():
+		return g_namespace.pkt_r
+
 	Logger.register('receiver', ['channel', 'pkt', 'start_time'])
 	Logger.set('receiver', 'start_time', time.time())
 
@@ -281,6 +357,8 @@ def receiver_loop(tb, channel_list, channel, options):
 	server.register_function( set_channel, 'set_channel' )
 	server.register_function( close_app, 'close_app' )
 	server.register_function( client_started, 'client_started' )
+ 	server.register_function( start_rcv, 'start_rcv' )
+	server.register_function( get_rcv, 'get_rcv' )
 
 	g_namespace.th.start()
 	print "Receiver listening for commands in port 8000"
@@ -296,10 +374,9 @@ def receiver_loop(tb, channel_list, channel, options):
 
 	# Enquanto nao recebeu a notificacao de parada, continua a execucao
 	while g_namespace.run:
-		print " ... r: ", t_rcv, ", c: ", t_cor
+		#print " ... r: ", t_rcv, ", c: ", t_cor
 		time.sleep(1)
-		if not options.tx_only:
-			Logger.append('receiver', 'channel', channel, time.time() )
+		Logger.append('receiver', 'channel', channel, time.time() )
 
 	Logger.append('receiver', 'pkt', t_rcv)
 	
@@ -312,14 +389,18 @@ def receiver_loop(tb, channel_list, channel, options):
 ##
 def main( options ):
 	channel_list = [
-			Channel(ch = 1, freq = 200.25e6, bw = 200e3),  # L
-			Channel(ch = 2, freq = 259.25e6, bw = 200e3),  # L # record 21
-			Channel(ch = 3, freq = 427.25e6, bw = 200e3),  # L sbt hd  28
-			Channel(ch = 4, freq = 325.25e6, bw = 200e3),  # L band hdtv 32
-			Channel(ch = 5, freq = 337.25e6, bw = 200e3),  # L rbs tv hd 34
-			Channel(ch = 6, freq = 719.25e6, bw = 200e3),  # L tv cachoeirinha 44
-			Channel(ch = 7, freq = 291.25e6, bw = 200e3),  # L ultra tv 48
-	]
+			Channel(ch = 1,  freq = 199.25e6, bw = 200e3),  # L # record 21
+			Channel(ch = 2,  freq = 259.25e6, bw = 200e3),  # L # 
+			Channel(ch = 3,  freq = 427.25e6, bw = 200e3),  # L sbt hd  28
+			Channel(ch = 4,  freq = 719.27e6, bw = 200e3),  # L tv cachoeirinha 44 STRONG SIGNAL
+			Channel(ch = 5,  freq = 671.25e6, bw = 200e3),  # L tv cultura do vale 53
+			Channel(ch = 6,  freq = 991.25e6, bw = 200e3),  # L tv urbanaa canal 55 VERY STRONG SIGNAL
+			Channel(ch = 7, freq =  230.25e6, bw = 200e3),  # L
+			Channel(ch = 8,  freq = 581.25e6, bw = 200e3),  # L rbs tv 12
+			Channel(ch = 9,  freq = 325.25e6, bw = 200e3),  # L band hdtv 32 VERY STRONG SIGNAL
+			Channel(ch =10,  freq = 291.25e6, bw = 200e3),  # L ultra tv 48 STRONG SIGNAL
+			Channel(ch =11,  freq = 337.25e6, bw = 200e3),  # L rbs tv hd 34 VERY STRONG SIGNAL
+		]
 
 	tb = build_up_block(options, channel_list) if  options.interferer else build_us_block(options)
 
@@ -330,10 +411,9 @@ def main( options ):
 
 	if not options.interferer:
 		# initial frequencies
-		if not options.tx_only:
-			tb.rx.radio.center_freq = channel_list[ channel ]
-
+		tb.rx.radio.center_freq = channel_list[ channel ]
 		tb.tx.radio.center_freq = channel_list[ channel ]
+
 		transmitter_loop(tb, channel_list, channel, options)
 	else:
 		global t_rcv
@@ -342,9 +422,8 @@ def main( options ):
 		t_cor = 0
 
 		tb.rx.radio.center_freq = channel_list[ channel ]
+		tb.tx.radio.center_freq = channel_list[ channel ]
 
-		if not options.tx_only:
-			tb.tx.radio.center_freq = channel_list[ channel ]
 		receiver_loop(tb, channel_list, channel, options)
 
 	time.sleep(1)
@@ -386,7 +465,6 @@ if __name__ == '__main__':
 
 	(options, args) = parser.parse_args()
 
-	options.tx_only = options.mode == 'txonly'
 
 	print '#######################################'
 	print '# mode: ' + str(options.mode)
@@ -401,4 +479,4 @@ if __name__ == '__main__':
 	# save log
 	dev = './receiver' if options.interferer else './transmitter'
 	Logger.dump('./{os}_results'.format(os = options.platform),
-			'/' + dev + '_' + options.platform + '_dur_' + str(int(options.duration)) + '_pkt_' + str(options.pkt_size) + '_burst_' + '%2.1f' % options.sending_duration + '_ssdur_' + '%2.1f' % options.sensing_duration + ('_mode_txonly' if options.tx_only else '_mode_ss'), options.iteration)
+			'/' + dev + '_' + options.platform + '_dur_' + str(int(options.duration)) + '_pkt_' + str(options.pkt_size) + '_burst_' + '%2.1f' % options.sending_duration + '_ssdur_' + '%2.1f' % options.sensing_duration + '_mode_ss',   options.iteration)

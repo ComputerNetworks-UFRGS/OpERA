@@ -31,10 +31,11 @@ class UHDAbstractArch(AbstractArch, gr.hier_block2):
 	# @param input_signature
 	# @param output_signature
 	def __init__(self, name, input_signature, output_signature):
+
 		self._radio_device = None
 
-		AbstractArch.__init__(self)
-		
+		AbstractArch.__init__(self, name=name)
+
 		gr.hier_block2.__init__(
 				self,
 				name =  name,

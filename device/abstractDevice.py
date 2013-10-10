@@ -19,15 +19,16 @@ Copyright 2013 OpERA
 
 from abc import ABCMeta, abstractmethod
 import time
+from OpERABase import OpERABase
 
 ## Abstract device
 # Interface for a specific hardware
-class AbstractDevice(object):
+class AbstractDevice(OpERABase):
 	__metaclass__ = ABCMeta
 
 	## CTOR
-	def __init__(self):
-		pass
+	def __init__(self, name="AbstractDevice"):
+		OpERABase.__init__(self, name=name)
 
 	## Getter for center_freq property.
 	# @return Device center frequency.

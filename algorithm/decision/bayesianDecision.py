@@ -18,7 +18,7 @@ Copyright 2013 OpERA
 ## @package algorithm
 
 from algorithm.abstractAlgorithm  import AbstractAlgorithm
-from utils.sensing.logger         import Logger
+from utils import Logger
 
 from math import *
 import numpy as np

@@ -14,8 +14,6 @@ Copyright 2013 OpERA
   limitations under the License.
 """
 
-#!/usr/bin/python
-
 ## @package algorithm
 
 # ::TODO:: Discover how to include patches externally
@@ -29,11 +27,13 @@ import unittest
 from gnuradio import blocks 
 
 from OpERAFlow import OpERAFlow
+from utils import Verify
 
 # Other modules needed
 from device.radioDevice   import RadioDevice
 from algorithm.decision   import EnergyDecision
 from reception.sensing    import EnergySSArch
+from device import *
 
 ## Test algorithm 
 #
@@ -101,6 +101,37 @@ class QaAlgorithm(unittest.TestCase):
 		opera.run()
 
 		self.assertEqual(expected_result , opera.ed.output)
+
+	## check if parameters are ok
+	def test_parameters01(self):
+
+		arr = (1, 1, 1, 1)
+		threshold = 1000
+
+		device = RadioDevice(the_source = blocks.vector_source_c(data = arr, vlen = 1),
+				the_sink = blocks.probe_signal_f())
+
+		ed = EnergySSArch(
+				device = device,
+				fft_size = len(arr),
+				mavg_size = 1,
+				algorithm = EnergyDecision(threshold)
+			)
+
+		opera = OpERAFlow("ed_device")
+		opera.add_path(ed, device, "ed")
+
+		a = 12
+		b = 9090
+		list_error, check_attr = Verify.check_parameters([a, b, device, ed], [(0, 12), [9, 89, 9090, 189], AbstractDevice, AbstractDevice])
+		print "checking attr"
+		if check_attr is True:
+			print "parameters ok"
+		else:
+			print "error"
+
+		print list_error
+	
 
 
 if __name__ == '__main__':

@@ -19,7 +19,7 @@ from algorithm.abstractAlgorithm import ThresholdAlgorithm
 import numpy       as np
 import scipy.stats as sc
 
-from utils.sensing import Logger
+from utils import Logger
 
 
 global_wave = [1] * 1024

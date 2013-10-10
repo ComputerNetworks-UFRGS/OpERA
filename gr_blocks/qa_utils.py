@@ -23,7 +23,7 @@ Copyright 2013 OpERA
 import sys
 import os
 import random
-path = os.path.abspath(os.path.join(os.path.dirname(__file__),"../../"))
+path = os.path.abspath(os.path.join(os.path.dirname(__file__),"../"))
 sys.path.insert(0, path)
 
 
@@ -32,7 +32,7 @@ from math     import *
 from gnuradio import gr, gr_unittest, uhd, blocks
 
 # UUT
-from utils.block    import GroupInN
+from arrayGrouper import GroupInN
 
 
 ## QA tests related to block utils
@@ -57,7 +57,7 @@ class QaUtils(gr_unittest.TestCase):
 		grouper_vlen = len(expected_result) + 1 # +1 to not activate the callback
 
 		src = blocks.vector_source_f( data = arr , vlen = 1)
-		grouper = GroupInN( group_vlen = 1, callback = None,  n_inputs = 3 )
+		grouper = GroupInN( max_items_group = 1, callback = None,  n_inputs = 3 )
 		grouper.set_enable( True )
 
 		self.tb.connect( src, (grouper, 0))
@@ -80,7 +80,7 @@ class QaUtils(gr_unittest.TestCase):
 		grouper_vlen = len(expected_result) + 1 # +1 to not activate the callback
 
 		src = blocks.vector_source_f( data = arr , vlen = 1, repeat = False )
-		grouper = GroupInN( group_vlen = 2, callback = None,  n_inputs = 3 )
+		grouper = GroupInN( max_items_group = 2, callback = None,  n_inputs = 3 )
 		grouper.set_enable( True )
 
 		self.tb.connect( src, (grouper, 0))

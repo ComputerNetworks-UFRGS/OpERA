@@ -36,43 +36,24 @@ class Chimas(object):
 	# @param top_block TopBlock instance
 	# @param learning_algorithm Learning algorithm (Qnoise)
 	# @param channel_list List of Channels objects to sense.
-	def __init__(self, top_block, learning_algorithm, channel_list = []):
+	def __init__(self, chimas_arch, learning_algorithm):
 
-		self._top_block = top_block
+		self._rx = chimas_arch
 		self._evaluater = learning_algorithm
 
-		self._channel_list = channel_list
-
-	## Return list of channels to sense.
-	# @return List of channels to sense.
-	@property
-	def channel_list(self):
-		return self._channel_list
-
-
-	## Set list of channels to sense.
-	# @param the_list
-	@channel_list.setter
-	def channel_list(self, the_list ):
-		self._channel_list = the_list
 
 	## Sense channels and evaluate them.
 	# @param iterations Number of evaluation.
 	# @return (SS result, learning result) when finished.
-	def run(self, iterations):
+	def run(self, channels, iterations = 1):
+		ln_result = 0
 
-		# sanity check
-		if not self.channel_list:
-			raise ValueError('Channel List is empy')
-
-		# sense and channgel evaluation
-		while iterations > 0 and iterations != -1 :
-			print iterations
-			ss_result    = self._top_block.rx.sense_channel_list(the_list = self.channel_list, sensing_time= 1)
+		if isinstance(channels, list):
+			for i in range(1, iterations):
+				ss_result    = self._rx.sense_channel_list(the_list = channels, sensing_time= 1)
+				ln_result    = self._evaluater.evaluate( ss_result )
+		else:
+			self._rx.sense_channel(the_channels = channels, sensing_time = 1 )
 			ln_result    = self._evaluater.evaluate( ss_result )
-			self.channel_list = reorder(self.channel_list, ln_result)
-
-			print '---------------------------------------------------'
-			iterations -= 1
 
 		return ss_result, ln_result

@@ -17,6 +17,7 @@ Copyright 2013 OpERA
 # @package algorithm
 
 from abc import abstractmethod
+
 import numpy as np
 
 ## Represent a QLearner
@@ -97,8 +98,12 @@ class QChannel:
 		## Inherited from parrent
 		# Calculate the reward based on a simple table that maps a RSSI value to a reward.
 		def _reward(self, data):
+			# Sanity check
+			if all(rssi == 1 or rssi == 0 for rssi, dec in data ):
+				raise ValueError("RSSI is all 0s and 1s. It this right?")
+
 			def sinr_contribution(rssi):
-				contribution = [(10e-5, 1), (10e-4, 0.75), (10e-3, 0.50), (0.10e-2, 0.25)]
+				contribution = [(10e-7, 1), (10e-6, 0.75), (3* 10e-6, 0.50), (6 * 10e-6, 0.25), (10e-4, 0.10)]
 				for check, value in contribution:
 					if rssi < check:
 						return value
@@ -106,9 +111,11 @@ class QChannel:
 
 			rssi = 0.0
 			count = 0
-			for d,r in data:
-				if d == 0:
-					rssi += r
+
+
+			for _rssi, _dec in data:
+				if _dec == 0:
+					rssi += _rssi
 					count += 1
 
 			if count:
@@ -130,7 +137,12 @@ class QChannel:
 		## Inherited from parent
 		# Calculated the reward by dividing the number of 'idles decisions' by the total of decisions.
 		def _reward(self, data):
-			idle = np.sum( [ 1-d for d,s in data] )
+
+			# Sanity check
+			if not all(d == 1 or d == 0 for s, d in data ):
+				raise ValueError("Decisions must be all 0s and 1s")
+
+			idle = np.sum( [ 1-d for s, d in data] )
 			return float(idle) / len(data)
 
 	## CTOR
@@ -158,6 +170,8 @@ class QChannel:
 	##
 	#
 	def get_q_val(self):
+		print' historic: ', self._historic.get_q_val()
+		print' noise:    ', self._noise.get_q_val()
 		return self._hw * self._historic.get_q_val() +  self._nw * self._noise.get_q_val()
 
 	##
@@ -190,14 +204,24 @@ class QNoise:
 
 	## Calculate QValue for all channels
 	# @param matrix Each row represents a channel. columns have the following semantics
-	#  [Channel][Status (Final Decision)][Array tuples (decision, RSSI)]
-	#  <---1---><-----------1-----------><---parameter udecisions------>	
+	#  [Channel][Array tuples (RSSI,decisions)]
+	#  <---1---><---parameter udecisions------>	
 	def evaluate(self, matrix):
 		channel_list = []
 		qvalue_list = []
 
-		for channel in (range(0, len(matrix))):
-			ch = matrix[channel][0]
+		# Decides if the channel  is occupied/vacant based on udecisions
+		def data_to_final_decision( dec_tuples ):
+			occupied = 0
+			vacant = 0
+
+			occupied = np.sum( 1 if dec else 0 for rssi, dec in dec_tuples )
+			vacant   = np.sum( 0 if dec else 1 for rssi, dec in dec_tuples )
+
+			return 1 if occupied > vacant else 0
+
+		for ch_data in matrix:
+			ch = ch_data[0]
 
 			# Check if ch is in channel dictionary
 			if ch not in self._channel:
@@ -208,8 +232,8 @@ class QNoise:
 
 			# Calculate QValue
 			self._channel[ch].calc_q_val(
-					final_decision = matrix[channel][1],
-					usensing      =  matrix[channel][2]
+					final_decision = data_to_final_decision( ch_data[1] ),
+					usensing      =  ch_data[1]
 			)
 
 			# Use leonard's format
@@ -217,17 +241,16 @@ class QNoise:
 			qvalue_list.append( self._channel[ch].get_q_val() )
 
 		# Return expect format
-		print [channel_list, qvalue_list]
 		return [channel_list, qvalue_list]
 		
-if __name__ == '__main__':
-
-	alpha = 0.3
-	hist_weight = [0.2, 0.35, 0.45]
-	noise_weight = 0.5
-
-	l = QNoise( n_weight = 0.5, n_data = ( 0.5, 3, hist_weight ), h_weight = 0.5, h_data = ( 0.5, 3, hist_weight ) )
-
-	matrix = ([1,0,[(1, 0.1), (1, 0.1), (1, 0.1), (1, 0.1), (0, 0.0001)]], )
-
-	print l.evaluate( matrix )
+#if __name__ == '__main__':
+#
+#	alpha = 0.3
+#	hist_weight = [0.2, 0.35, 0.45]
+#	noise_weight = 0.5
+#
+#	l = QNoise( n_weight = 0.5, n_data = ( 0.5, 3, hist_weight ), h_weight = 0.5, h_data = ( 0.5, 3, hist_weight ) )
+#
+#	matrix = ([1,0,[(1, 0.1), (1, 0.1), (1, 0.1), (1, 0.1), (0, 0.0001)]], )
+#
+#	print l.evaluate( matrix )

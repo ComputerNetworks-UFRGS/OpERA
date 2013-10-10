@@ -31,7 +31,7 @@ from gnuradio import gr, gr_unittest, uhd
 
 
 # UUT
-from ranking_arch import *
+from rankingArch import *
 
 
 ## QA tests related to ranking.

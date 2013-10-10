@@ -27,12 +27,8 @@ from uhdAbstractArch import UHDAbstractArch
 class UHDRxArch(UHDAbstractArch):
 
 	## CTOR
-	def __init__(self, 
-			name, 
-			input_signature, 
-			output_signature):
-
-		UHDAbstractArch.__init__(self, name, input_signature, output_signature)
+	def __init__(self, name, input_signature, output_signature):
+		UHDAbstractArch.__init__(self, name=name, input_signature=input_signature, output_signature=output_signature)
 
 	## Receives the package
 	def receive_pkt(self):

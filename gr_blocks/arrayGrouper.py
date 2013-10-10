@@ -31,10 +31,10 @@ import numpy as np
 class GroupInN(gr.sync_block):
 
 	## CTOR
-	# @param group_vlen Number of elements to group before forwarding
+	# @param max_items_group Number of elements to group before forwarding
 	# @param callback   Function called when the data is grouped
 	# @param n_inputs   number of inputs to group
-	def __init__(self, group_vlen, callback, n_inputs = 1):
+	def __init__(self, max_items_group, callback, n_inputs=1):
 
 		gr.sync_block.__init__(
 				self,
@@ -44,7 +44,7 @@ class GroupInN(gr.sync_block):
 		)
 
 		self._enable   = False
-		self._max_vlen = group_vlen
+		self._max_vlen = max_items_group
 		self._callback = callback
 		self._ninputs  = n_inputs
 
@@ -59,11 +59,23 @@ class GroupInN(gr.sync_block):
 
 
 	## Enable/Disable grouping.
+	#
 	def set_enable(self, val):
+		if val:
+			self._item_group = []
+
 		self._enable = val
 
-	## GNU Radio main function.
-	# The items are received and grouped in this function.
+
+	##
+	#
+	def get_items(self):
+		tmp = self._item_group
+
+		self._item_group = []
+		return tmp
+
+
 	def work(self, input_items, output_items):
 		if self._enable and len(self._item_group) < self._max_vlen:
 			# this code create the tuple of items
@@ -82,3 +94,4 @@ class GroupInN(gr.sync_block):
 					self._item_group = []
 
 		return len(input_items)
+

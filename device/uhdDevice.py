@@ -24,8 +24,8 @@ class UHDBase(AbstractDevice):
 
 	## CTOR.
 	# @param uhd UHD Device: uhd.usrp_source or uhd.usrp_sink.
-	def __init__(self, uhd):
-		AbstractDevice.__init__(self)
+	def __init__(self, uhd, name="UHDBase"):
+		AbstractDevice.__init__(self, name=name)
 		self._uhd = uhd
 
 	## Getter for the UHD device.
@@ -41,7 +41,7 @@ class UHDBase(AbstractDevice):
 
 	## @abstract
 	def _set_center_freq(self, center_freq):
-		self.uhd.set_center_freq( center_freq )
+		self.uhd.set_center_freq(center_freq)
 
 # samp_rate property
 	def _get_samp_rate(self):
@@ -55,7 +55,7 @@ class UHDBase(AbstractDevice):
 		return self.uhd.get_gain()
 
 	def _set_gain(self, gain):
-		self.uhd.set_gain( gain )
+		self.uhd.set_gain(gain)
 
 
 ## Wrapper for uhd.usrp_source device.
@@ -65,19 +65,12 @@ class UHDSource(UHDBase):
 	## CTOR.
 	# @param  device_addr USRP IP address.
 	# @param stream_args USRP stream arguments.
-	def __init__(
-			self,
-			device_addr = '',
-			stream_args = uhd.stream_args('fc32')
-			):
+	def __init__(self, device_addr = '', stream_args = uhd.stream_args('fc32'), name="UHDSource"):
 
 		# Only creates the base class passing a uhd.usrp_source
-		UHDBase.__init__(
-				self,
-				uhd = uhd.usrp_source(
-					device_addr = device_addr,
-					stream_args = stream_args)
-				)
+		UHDBase.__init__(self, uhd = uhd.usrp_source(device_addr = device_addr,
+							stream_args = stream_args), 
+							name = name)
 
 		self.uhd.set_antenna('RX2', 0)
 
@@ -88,19 +81,12 @@ class UHDSink(UHDBase):
 	## CTOR.
 	# @param  device_addr USRP IP address.
 	# @param stream_args USRP stream arguments.
-	def __init__(
-			self,
-			device_addr = '',
-			stream_args = uhd.stream_args('fc32')
-			):
+	def __init__(self, device_addr = '', stream_args = uhd.stream_args('fc32'), name="UHDSink"):
 
 		# Only creates the base class passing a uhd.usrp_sink
-		UHDBase.__init__(
-				self,
-				uhd = uhd.usrp_sink(
-					device_addr = device_addr,
-					stream_args = stream_args)
-				)
+
+		UHDBase.__init__(self, uhd = uhd.usrp_sink(device_addr = device_addr, stream_args = stream_args),
+				name = name)
 
 		self.uhd.set_antenna('TX/RX', 0)
 

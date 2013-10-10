@@ -17,14 +17,15 @@ Copyright 2013 OpERA
 ## @package device
 
 from abc import ABCMeta, abstractmethod
+from OpERABase import OpERABase
 
 ## Abstract class for a SS architecture.
 # Provides simple generic method that must be implemented for all SS architectures.
-class AbstractSSArch(object):
+class AbstractSSArch(OpERABase):
 
 	## CTOR
-	def __init__(self):
-		pass
+	def __init__(self, name="AbstractSSArch"):
+		OpERABase.__init__(self, name=name)
 
 	## Must be implemented on derived classes.
 	# @param the_list List of Channels objects to sense.

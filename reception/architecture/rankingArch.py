@@ -16,14 +16,14 @@ Copyright 2013 OpERA
 
 ## @package ssf
 
-from gnuradio                   import gr
-from gnuradio					import fft
-from gnuradio					import blocks
-from device                     import UHDSSArch
-from utils.sensing.top_block    import TopBlock
-from utils.block                import GroupInN
-from algorithm                  import decision
-from reception.sensing          import EnergyCalculator
+from gnuradio import gr
+from gnuradio import fft
+from gnuradio import blocks
+from device import UHDSSArch
+from utils import TopBlock
+from gr_blocks import GroupInN
+from algorithm import decision
+from reception.sensing import EnergyCalculator
 
 import time
 import threading
@@ -40,13 +40,16 @@ class QLearningWorker(gr.sync_block):
 	# @param vec_size Size of each input.
 	# @param algorithm Detection algorithm. An AbstractAlgorithm implementation
 	def __init__(self, vec_size, algorithm):
+
+		# input: array of floats
+		# output: a tuple of (energy, decision)
 		gr.sync_block.__init__(
 				self,
 				name = "qlearning_worker",
 				in_sig =   [np.dtype((np.float32, vec_size))], 
-				out_sig =  [np.float32]
+				out_sig =  [np.float32, np.float32] 
 			)
-		self.algorithm = algorithm
+		self._algorithm = algorithm
 
 
 	## GNU Radio main function.
@@ -57,7 +60,9 @@ class QLearningWorker(gr.sync_block):
 
 		# Process input
 		energy = np.sum( in0 ) / in0.size
+
 		output_items[0][0] = energy
+		output_items[1][0] = self._algorithm.decision( energy )
 
 		return len(input_items)
 
@@ -77,7 +82,7 @@ class SimpleRankingDetector(gr.hier_block2):
 				self,
 				name = "simple_ranking_detector",
 				input_signature =  gr.io_signature(1, 1, gr.sizeof_gr_complex),
-				output_signature = gr.io_signature(1, 1, gr.sizeof_float)
+				output_signature = gr.io_signature(2, 2, gr.sizeof_float)
 			)
 
 		# Blocks
@@ -87,11 +92,13 @@ class SimpleRankingDetector(gr.hier_block2):
 		self.c2mag_0 = blocks.complex_to_mag_squared(fft_size)
 
 		# Instatiate the energy calculator
-		self.ql  = QLearningWorker(fft_size, algorithm = sensing.EnergyAlgorithm( ed_threshold ))
-		self.mavg = blocks.moving_average_ff(mavg_size, 1.0/mavg_size)
+		self.ql   = QLearningWorker(fft_size, algorithm = EnergyDecision( ed_threshold ))
 
 		# Flow graph
-		self.connect(self, self.s2v_0, self.fft_0, self.c2mag_0, self.ql, self)
+		self.connect(self, self.s2v_0, self.fft_0, self.c2mag_0, self.ql)
+
+		self.connect((self.ql, 0), (self, 0))
+		self.connect((self.ql, 1), (self, 1))
 
 
 ## Ranking architecture.
@@ -101,9 +108,9 @@ class RankingArch( UHDSSArch ):
 	## CTOR.
 	# @param device     RadioDevice instance.
 	# @param detector   A SS detector. 
-	# @param group_vlen Number of ouputs to group.
+	# @param max_items_group Number of ouputs to group.
 	# @return A tuple with 3 elements: (final decision, energy, avg energy)
-	def __init__(self, device, detector, group_vlen):
+	def __init__(self, device, detector, max_items_group):
 
 		UHDSSArch.__init__(
 				self,
@@ -115,15 +122,18 @@ class RankingArch( UHDSSArch ):
 
 		# Group items
 		self._grouper  = GroupInN(
-				group_vlen = group_vlen,
+				max_items_group = max_items_group,
 				callback = None,
-				n_inputs = 1
+				n_inputs = 2
 			)
 
 		self._detector = detector
 
 		# inputs
-		self.connect( self, detector, self._grouper)
+		self.connect(self, detector)
+
+		self.connect((detector, 0), (self._grouper, 0))
+		self.connect((detector, 1), (self._grouper, 1))
 
 		# no outputs
 
@@ -136,31 +146,36 @@ class RankingArch( UHDSSArch ):
 		# Configure device center frequency
 		# ::TRICK:: self._device  can be a DeviceChannelModel object
 		#           If is the case, then check the DeviceChannelModel::center_freq method
-		#self.uhd.center_freq = the_channel
+		self.radio.center_freq = the_channel
+		time.sleep(0.1)
+
 		self._grouper.set_enable( True )
+		time.sleep( sensing_time )
+		self._grouper.set_enable( False )
+
+		return self._grouper.get_items()
+
 
 	## SS on a single channel
 	# Reimplement from UHDSSArch::sense_channel
 	# @param the_channel Channel to be sensed.
 	# @param sensing_time Sensing duration on channel.
 	def sense_channel(self, the_channel, sensing_time):
-		self._get_sensing_data( the_channel, sensing_time )
+		return self._get_sensing_data( the_channel, sensing_time )
 
 
-## Ranking top block.
-class RankingRunner( TopBlock ):
+	##
+	# @param the_list
+	# @param sensing_time
+	def sense_channel_list(self, the_list, sensing_time):
+		res = []
 
-	## CTOR
-	# @param device A RadioDevice instance.
-	# @param detector A SS with three outputs: 0- decision, 1- energy, 2- avg energy
-	# @param group_vlen 
-	def __init__(self,
-			device,
-			detector,
-			group_vlen):
-		TopBlock.__init__(self, name = 'Ranking Top Block')
+		for channel in the_list:
+			x = self.sense_channel(channel, sensing_time)
 
-		# processing blocks
-		self._device = device
-		self.rx = RankingArch(device = device, detector = detector, group_vlen = group_vlen)
-		self.connect(device.source, self.rx)
+			res.append( (channel.channel , x) )
+
+		return res
+
+
+

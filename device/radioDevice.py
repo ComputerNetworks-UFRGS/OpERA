@@ -26,8 +26,9 @@ class RadioDevice(AbstractDevice):
 	## CTOR
 	# @param the_source Source of data
 	# @param the_sink sink of data
-	def __init__(self, the_source, the_sink, uhd_device = None):
-		AbstractDevice.__init__(self)
+	def __init__(self, the_source, the_sink, uhd_device = None, name="RadioDevice"):
+
+		AbstractDevice.__init__(self, name=name)
 
 		self._source = the_source
 		self._sink = the_sink
@@ -75,7 +76,7 @@ class RadioDevice(AbstractDevice):
 	## Specific center frequency setter property for UHD devices
 	# @abstract
 	def _set_center_freq(self, center_freq):
-		self.uhd.set_center_freq( center_freq )
+		self.uhd.set_center_freq(center_freq)
 
 	## Specific sample rate getter property for UHD devices
 	def _get_samp_rate(self):
@@ -83,7 +84,7 @@ class RadioDevice(AbstractDevice):
 
 	## Specific sample rate setter property for UHD devices
 	def _set_samp_rate(self, samp_rate):
-		self.uhd.set_samp_rate( samp_rate )
+		self.uhd.set_samp_rate(samp_rate)
 
 	## Specific gain getter property for UHD devices
 	def _get_gain(self):
@@ -91,7 +92,7 @@ class RadioDevice(AbstractDevice):
 
 	## Specific gain setter property for UHD devices
 	def _set_gain(self, gain):
-		self.uhd.set_gain( gain )
+		self.uhd.set_gain(gain)
 
 	@property
 	def my_str(self):

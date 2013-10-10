@@ -25,9 +25,8 @@ import time
 import math
 import numpy as np
 
-from device					  import UHDSSArch
-from utils.sensing.top_block  import TopBlock
-from utils.sensing            import Logger
+from device import UHDSSArch
+from utils import Logger, TopBlock
 
 ## Calculate the energy
 # Receives a vector of floats as inputs.
@@ -36,16 +35,17 @@ class EnergyCalculator(gr.sync_block):
 	## CTOR
 	# @param vec_size
 	# @param algorithm
-	def __init__(self, vec_size, algorithm):
+	def __init__(self, vec_size, algorithm, name="energy_calculator"):
 		gr.sync_block.__init__(
 				self,
-				name = "energy_calculator",
-				in_sig =   [np.dtype((np.float32, vec_size))], 
-				out_sig =  [np.float32]
+				name = name,
+				in_sig = [np.dtype((np.float32, vec_size))], 
+				out_sig = [np.float32]
 			)
+		
 		self.algorithm = algorithm
 
-		Logger.register('energy_calculator', ['energy', 'decision' ] )
+		Logger.register(name, ['energy', 'decision' ] )
 
 
 		self._count = 0
@@ -65,7 +65,7 @@ class EnergyCalculator(gr.sync_block):
 		Logger.append('energy_calculator', 'energy', energy)
 		Logger.append('energy_calculator', 'decision', out0[0])
 
-		return len( input_items )
+		return len(input_items)
 
 ## Top level of Energy Detector sensing algorithm
 # A object of this class must be declared and connected in a flow blocksaph.
@@ -99,7 +99,7 @@ class EnergyDetectorC(gr.hier_block2):
 
 ## A UHDSSArch with the energy detector.
 # Provides the sense_channel() method to sense a list of channels.
-class EnergySSArch( UHDSSArch ):
+class EnergySSArch(UHDSSArch):
 
 	## CTOR
 	# @param device RadioDevice instance.
@@ -110,8 +110,8 @@ class EnergySSArch( UHDSSArch ):
 
 		UHDSSArch.__init__(
 			self,
-			uhd				 = device,
-			name			 = "EnergySSArch",
+			uhd = device,
+			name = "EnergySSArch",
 			input_signature  = gr.io_signature(1, 1, gr.sizeof_gr_complex),
 			output_signature = gr.io_signature(1, 1, gr.sizeof_float),
 		)
@@ -139,7 +139,9 @@ class EnergySSArch( UHDSSArch ):
 		# Configure device center frequency
 		# ::TRICK:: self._device  can be a DeviceChannelModel object
 		#		   If is the case, then check the DeviceChannelModel::center_freq method
-		self.uhd.center_freq = the_channel
+
+
+		self.radio.center_freq = the_channel
 
 		# Sleep for sensing_time
 		# ::TODO:: This should be removed.

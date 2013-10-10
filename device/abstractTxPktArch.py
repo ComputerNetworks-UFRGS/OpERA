@@ -17,16 +17,18 @@ Copyright 2013 OpERA
 ## @package device
 
 from abc import ABCMeta, abstractmethod
+from OpERABase import OpERABase
 
+# ::TODO:: init operabase
 
 ## Abstract class for a TX architecture.
 #
-class AbstractTxPktArch( object ):
+class AbstractTxPktArch(OpERABase):
 	__metaclass__ = ABCMeta
 
 	## CTOR
-	def __init__(self):
-		pass
+	def __init__(self, name="AbstractTxPktArch"):
+		OpERABase.__init__(self, name=name)
 
 
 	## Send payload.

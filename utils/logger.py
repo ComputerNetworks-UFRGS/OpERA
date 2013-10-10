@@ -14,7 +14,6 @@ Copyright 2013 OpERA
   limitations under the License.
 """
 
-#!/usr/bin/env python
 
 #@package utils
 
@@ -29,6 +28,48 @@ class Logger(object):
 	_history = {}
 	_objects = {}
 	_ch_status = 0
+	_print_list = {}
+
+
+	## Associates a name and a variable in the print list (which is a dict).
+	# @param name
+	# @param variable 
+	@staticmethod
+	def add_to_print_list(name, variable):
+		# First, check if the name is already a key in the dict.
+		if name in Logger._print_list:
+			# The variable is associated with the name. Just return.
+			if variable in Logger._print_list[name]:
+				return
+			
+			else:
+				Logger._print_list[name].append(variable)
+
+		else:
+			Logger._print_list[name] = []
+			Logger._print_list[name].append(variable)
+
+	## Removes the variable associated with the key 'name' in the print list.
+	# @param name
+	# @param variable	
+	@staticmethod	
+	def remove_from_print_list(name, variable):
+		# Check if the key is in the dict
+		if name in Logger._print_list:
+			if variable in Logger._print_list[name]:
+				# Check if the variable is the only one in the list.
+				if len(Logger._print_list[name]) == 1:
+					# Removes the key.
+					del Logger._print_list[name]
+
+				# If the variable is not the only one, removes it of the print list, but do not remove the key.
+				else:
+					for i in range(0, len(Logger._print_list[name])):
+						if Logger._print_list[name][i] is variable:
+							del_index = i
+
+					Logger._print_list[name].pop(del_index)
+		
 
 	## Clear all data added
 	@staticmethod
@@ -81,14 +122,20 @@ class Logger(object):
 	# @param ch_status Append global channel status also
 	@staticmethod
 	def append(name, variable, value, ch_status = False):
+		
+		# Check if the name and the variable are associated in the print list. If so, print the value.
+		if name in Logger._print_list:
+			if variable in Logger._print_list[name]:
+				print name + ":" + variable + " = " + str(value)
+
 		# Return if log is not enable
 		if not Logger._enable:
 			return
 
 		if not ch_status:
-			Logger._history[name][variable].append( value )
+			Logger._history[name][variable].append(value)
 		else:
-			Logger._history[name][variable].append( (value, Logger._ch_status) )
+			Logger._history[name][variable].append((value, Logger._ch_status))
 
 
 	## Change previosly added data value

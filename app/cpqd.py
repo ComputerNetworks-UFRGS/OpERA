@@ -44,8 +44,8 @@ from reception.sensing import WaveformDetector
 from reception.architecture import FeedbackTopBlock, FeedbackF
 from algorithm.decision import BayesLearningThreshold, WaveformDecision
 from algorithm import KunstTimeFeedback, FeedbackAlgorithm
-from utils.block import *
-from utils.sensing import Logger, TopBlock
+from gr_blcoks import *
+from utils import Logger, TopBlock
 
 
 

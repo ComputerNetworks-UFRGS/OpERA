@@ -14,17 +14,12 @@ Copyright 2013 OpERA
   limitations under the License.
 """
 
-## @package device
+# ::TODO:: OpERABase como superclasse de todas as superclasses do OpERA.
+# ::TODO:: fazer os inits das superclasses do jeito "moderno":  http://stackoverflow.com/questions/2399307/python-invoke-super-constructor (ver comentario do ignacio)
 
-# GNU Radio imports
-from gnuradio import gr
-from OpERABase import OpERABase
+## The OpERA base class. It has commun attributes betwen the OpERA classes.
+class OpERABase(object):
+	def __init__(self, name="OpERABase"):
 
-
-## Abstract class for architetures
-# This is the base class for all the architetures
-class AbstractArch(OpERABase):
-	def __init__(self, name="AbstractArch"):
-		OpERABase.__init__(self, name=name)
-
-
+		#check if it is necessary.
+		name = name
