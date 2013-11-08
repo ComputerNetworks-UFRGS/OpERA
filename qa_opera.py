@@ -63,7 +63,6 @@ class QaAlgorithm(unittest.TestCase):
 				the_sink = blocks.probe_signal_f(), uhd_device = None )
 
 		ed = EnergySSArch(
-				device = device,
 				fft_size = len(arr),
 				mavg_size = 1,
 				algorithm = EnergyDecision(threshold)
@@ -74,7 +73,7 @@ class QaAlgorithm(unittest.TestCase):
 		opera.run()
 
 		# Channel must be declared as occupied
-		self.assertEqual(expected_result , opera.ed.output)
+		self.assertEqual(expected_result , opera.ed.radio.sink.level())
 
 
 	## Test UHDAlgorithm  with a EDTopblock
@@ -90,7 +89,6 @@ class QaAlgorithm(unittest.TestCase):
 				the_sink = blocks.probe_signal_f())
 
 		ed = EnergySSArch(
-				device = device,
 				fft_size = len(arr),
 				mavg_size = 1,
 				algorithm = EnergyDecision(threshold)
@@ -100,7 +98,7 @@ class QaAlgorithm(unittest.TestCase):
 		opera.add_path(ed, device, "ed")
 		opera.run()
 
-		self.assertEqual(expected_result , opera.ed.output)
+		self.assertEqual(expected_result , opera.ed.radio.sink.level())
 
 	## check if parameters are ok
 	def test_parameters01(self):
@@ -112,7 +110,6 @@ class QaAlgorithm(unittest.TestCase):
 				the_sink = blocks.probe_signal_f())
 
 		ed = EnergySSArch(
-				device = device,
 				fft_size = len(arr),
 				mavg_size = 1,
 				algorithm = EnergyDecision(threshold)

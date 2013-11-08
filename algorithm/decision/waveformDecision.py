@@ -15,36 +15,44 @@ Copyright 2013 OpERA
 """
 
 from algorithm.abstractAlgorithm import ThresholdAlgorithm
+from utils import Logger
 
 import numpy       as np
 import scipy.stats as sc
 
-from utils import Logger
 
-
-global_wave = [1] * 1024
 
 ## Class implementing a Waveform Algorithm
 # Uses Pearson correlation do math a received signal  with the known patterns.
 class WaveformDecision(ThresholdAlgorithm):
 
+	WAVEFORMS = [ [0.1] * 1024,  ]
+
+
 	## CTOR
 	# @param threshold Decision threshold
 	# @param waveforms Array of known patterns
-	def __init__(self, threshold, waveforms = [global_wave]):
+	def __init__(self, threshold, waveforms = WAVEFORMS):
 		ThresholdAlgorithm.__init__(self, threshold = threshold)
 
 		self._waveforms = waveforms
 
+		Logger.register('waveform_decision', ['correlation', 'decision'] )
+
 	## @abstractmethod
+	# Called from a signal processing block to made a decision
+	# @param data_in Mag squared of samples
+	# @return Tuple (status, correlation)
 	def decision(self, data_in):
-		max_corr = 0
+		max_corr = -1.0
 
 		for wave in self._waveforms:
 			max_corr = max(abs(self.correlate(wave, data_in)), max_corr)
 
-		print  max_corr
-		return max_corr > self.threshold
+		Logger.append('waveform_decision', 'correlation', max_corr)
+		Logger.append('waveform_decision', 'decision', (1 if self.threshold < max_corr else 0))
+
+		return ((1 if self.threshold < max_corr else 0), max_corr)
 
 
 	## Correlates a signal waveform with a known pattern 

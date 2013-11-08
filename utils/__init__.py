@@ -1,7 +1,6 @@
 from SSTypes           import SSA_STATES
-from proxy	        import Proxy
-from logger	        import Logger
-from channel            import Channel, ChannelModel
+from logger	           import Logger
 from topBlock          import TopBlock
-from deviceChannelModel import ChannelModeler, ChannelThread
-from verify 		import Verify
+from channel           import Channel
+from channelModeler    import ChannelModeler, ChannelThread
+from verify 		   import Verify

@@ -43,12 +43,11 @@ class EnergyCalculator(gr.sync_block):
 				out_sig = [np.float32]
 			)
 		
-		self.algorithm = algorithm
+		self._algorithm = algorithm
+		self._energy = 0
 
-		Logger.register(name, ['energy', 'decision' ] )
-
-
-		self._count = 0
+		if not self._algorithm:
+			raise AttributeError("algorithm must be an ThresholdLearningAlgorithm")
 
 	## Calculate the energy
 	# @param	input_items	Input array with float values
@@ -58,14 +57,15 @@ class EnergyCalculator(gr.sync_block):
 		out0 = output_items[0]
 
 		# Process input
-		energy = np.sum( np.square(in0) ) / (in0.size)
-		out0[0] = self.algorithm.decision( energy ) if self.algorithm else energy
-
-
-		Logger.append('energy_calculator', 'energy', energy)
-		Logger.append('energy_calculator', 'decision', out0[0])
+		dec, self._energy = self._algorithm.decision( in0 )
+		out0[0] = dec
 
 		return len(input_items)
+
+	## Return the energy
+	# @return Energy
+	def output(self):
+		return self._energy
 
 ## Top level of Energy Detector sensing algorithm
 # A object of this class must be declared and connected in a flow blocksaph.
@@ -87,35 +87,34 @@ class EnergyDetectorC(gr.hier_block2):
 
 		# Blocks
 		# Convert the output of a FFT
-		self.s2v_0   = blocks.stream_to_vector(gr.sizeof_gr_complex, fft_size) 
-		self.fft_0   = fft.fft_vcc(fft_size, True, [])
-		self.c2mag_0 = blocks.complex_to_mag_squared(fft_size)
+		s2v_0   = blocks.stream_to_vector(gr.sizeof_gr_complex, fft_size) 
+		fft_0   = fft.fft_vcc(fft_size, True, [])
+		c2mag_0 = blocks.complex_to_mag_squared(fft_size)
 
 		## Instatiate the energy calculator
-		self.ec  = EnergyCalculator(fft_size, algorithm)
+		self._ec  = EnergyCalculator(fft_size, algorithm)
 
 		## Flow graph
-		self.connect(self, self.s2v_0, self.fft_0, self.c2mag_0, self.ec, self)
+		self.connect(self, s2v_0, fft_0, c2mag_0, self._ec, self)
+
+
 
 ## A UHDSSArch with the energy detector.
 # Provides the sense_channel() method to sense a list of channels.
 class EnergySSArch(UHDSSArch):
 
 	## CTOR
-	# @param device RadioDevice instance.
 	# @param fft_size FFT Lenght utilized in the EnergyDetector.
 	# @param mavg_size Number of elements considered in the energy moving average.
 	# @param algorithm Detection algorithm (usually a EnergyAlgorithm instance).
-	def __init__(self, device, fft_size, mavg_size, algorithm):
+	def __init__(self, fft_size, mavg_size, algorithm):
 
 		UHDSSArch.__init__(
 			self,
-			uhd = device,
 			name = "EnergySSArch",
 			input_signature  = gr.io_signature(1, 1, gr.sizeof_gr_complex),
 			output_signature = gr.io_signature(1, 1, gr.sizeof_float),
 		)
-
 
 		# Flow
 		self._detector = EnergyDetectorC(
@@ -124,53 +123,23 @@ class EnergySSArch(UHDSSArch):
 				algorithm = algorithm
 			)
 
-		self._sink = device.sink
-
 		#             #
 		# Connections #
 		#             #
 		self.connect(self, self._detector, self)
+
 
 	## Configure the device to sense the given frequency.
 	# @param the_channel Channel object instance. Channel to sense.
 	# @param sensing_time Duration of sensing.
 	# @return SS information of channel.
 	def _get_sensing_data(self, the_channel, sensing_time):
-		# Configure device center frequency
-		# ::TRICK:: self._device  can be a DeviceChannelModel object
-		#		   If is the case, then check the DeviceChannelModel::center_freq method
-
-
-		self.radio.center_freq = the_channel
 
 		# Sleep for sensing_time
-		# ::TODO:: This should be removed.
 		time.sleep( sensing_time )
+		return self.output()
 
-		return self._sink.level()
-
-
-	@property
+	##
+	#
 	def output(self):
-		return self._sink.level()
-
-
-## Energy Detector top block
-# ::TODO:: Update to UHDSSArch implementation
-class EDTopBlock( TopBlock ):
-
-	# CTOR
-	# @param addr
-	# @param fft_size
-	# @param moving_avg_size
-	# @param samp_rate
-	# @param device RadioDevice object
-	# @param algorithm
-	def __init__(self, addr, fft_size, moving_avg_size, samp_rate, device, algorithm):
-		## @TODO Flow graph should be constructed outside
-		TopBlock.__init__(self, "Energy Detector Blocks")
-
-		ed = EnergyDetectorC(fft_size, moving_avg_size, algorithm)
-		self.connect(device.source, ed, device.sink)
-
-		self.rx = ed
+		return self._detector._ec.output()

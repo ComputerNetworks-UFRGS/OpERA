@@ -152,19 +152,19 @@ class BayesLearningThreshold(AbstractAlgorithm):
 	## Calculate bayesian hipthosis
 	# @param th Threshold
 	# @param energy Calculated energy
-	def bayesian_hiphotesis(self, th, energy):
-		return 1 if energy > th else -1
+	def bayesian_hiphotesis(self, th, signal):
+		N = signal.size
 
 		# OLD (BUT CORRECT) IMPLEMENTATION OF THE BAYESIAN DETECTOR
 		# @WARNING Without numpy this is a MAJOR bottleneck
-		#s = np.sum( np.multiply(
-		#				[self.calculate_w(th)] * N,
-		#				np.sign( np.subtract(signal, th) )
-		#			)
-		#		)
+		s = np.sum( np.multiply(
+						[self.calculate_w(th)] * N,
+						np.sign( np.subtract(signal, th) )
+					)
+				)
 
-		#s = (s/N) - self.calculate_Mu(th, N)
-		#return s
+		s = (s/N) - self.calculate_Mu(th, N)
+		return s
 
 	## Update values of PD, PF, P, C, etc, based on bayesian hiphotesis and the feedback
 	# @param th Threshold utilized
@@ -331,4 +331,4 @@ class BayesLearningThreshold(AbstractAlgorithm):
 		Logger.append('bayes_learning', 'pf', self._pf[self._th])
 		Logger.append('bayes_learning', 'pm', self._pm[self._th])
 
-		return 1 if bayes_hip > 0 else 0
+		return (1 if bayes_hip > 0 else 0, 0.0)

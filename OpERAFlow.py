@@ -14,35 +14,41 @@ Copyright 2013 OpERA
   limitations under the License.
 """
 
-## @package algorithm
+"""
+@package algorithm
+"""
 
 from gnuradio import gr
 
-## Interface to interact with a UHD and some other object 
-# 
 class OpERAFlow(gr.top_block):
+	"""
+	Interface to interact with a UHD and some other object 
+	"""
 
-	## Constants to specify the connection type
+	# Constants to specify the connection type
 	CONN_SOURCE = 0b001
 	CONN_SINK   = 0b010
 	CONN_SOURCE_SINK = CONN_SOURCE | CONN_SINK
 
-	## CTOR
-	# @param name
 	def __init__(self, name):
+		"""
+		CTOR
+		@param name
+		"""
 		object.__setattr__(self, '_dict_of_archs', {})
 		gr.top_block.__init__(self, name = name)
-		
 
-	## Add an abstract archicteture to be manageable through OpERA and allow an instance of the OpERAFlow class to call modules from a given abstract architeture
-	# @param abstract_arch
-	# @param radio_device
-	# @param name_of_arch
-	# @param connection_type
+
 	def add_path(self, abstract_arch, radio_device, name_of_arch, connection_type = CONN_SOURCE_SINK):
+		"""
+		Add an abstract archicteture to be manageable through OpERA and allow an instance of the OpERAFlow class to call modules from a given abstract architeture
+		@param abstract_arch
+		@param radio_device
+		@param name_of_arch
+		@param connection_type
+		"""
 
 		# abstract_arch must be an instance of some abstract architeture class.
-
 		self._dict_of_archs[name_of_arch] = abstract_arch
 
 		setattr(self, name_of_arch, abstract_arch)
@@ -57,8 +63,10 @@ class OpERAFlow(gr.top_block):
 			abstract_arch.set_radio_device( radio_device )
 
 
-	## Definition of the getattr for the class
 	def __getattr__(self, name):
+		"""
+		Redefinition of the getattr for the class
+		"""
 		if name == "_dict_of_archs":
 			return object.getattr(self, "_dict_of_archs")
 		else:
@@ -66,24 +74,23 @@ class OpERAFlow(gr.top_block):
 				if hasattr(self._dict_of_archs[key], name):
 					return self._dict_of_archs[key].name
 
-		raise AttributeError("%r object has no attribute %r" %
-			(self.__class__, attr))
+		raise AttributeError("%r object has no attribute %s" % (self.__class__, name))
 
-	## Setattr method for the class
+
 	def __setattr__ (self, name, val):
+		"""
+		Redefinition of the setattr for the class
+		"""
 		tmp = None
-
 
 		# in add_path
 		if name in self._dict_of_archs:
 			tmp = self._dict_of_archs[name]
-
-		# common atribuition
+		# common attribution
 		else:
 			object.__setattr__(self, name, val)
 			return
 			
-
 		if tmp:
 			setattr(OpERAFlow, name, tmp)
 			return 

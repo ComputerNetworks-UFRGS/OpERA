@@ -27,9 +27,9 @@ sys.path.insert(0, path)
 from gnuradio import gr, gr_unittest, fft, blocks
 
 from OpERAFlow import OpERAFlow
-from energyDetector         import EnergyDetectorC, EnergySSArch, EDTopBlock
-from device.radioDevice     import RadioDevice
-from algorithm.decision      import EnergyDecision
+from energy    import EnergyDetectorC, EnergySSArch
+from device    import RadioDevice
+from algorithm.decision     import EnergyDecision
 
 import numpy as np
 
@@ -58,7 +58,9 @@ class QaEnergyDetector(gr_unittest.TestCase):
 		dst = blocks.probe_signal_f()
 		radio_device = RadioDevice(the_source = src, the_sink = dst)
 
-		ed = EnergySSArch(radio_device, fft_size, mavg_size, EnergyDecision(1) )
+		ed = EnergySSArch(fft_size,
+				mavg_size,
+				EnergyDecision(1) )
 
 		## flowgraph
 		self.tb.add_path(ed, radio_device, 'ed')
@@ -97,7 +99,6 @@ class QaEnergyDetector(gr_unittest.TestCase):
 		device = RadioDevice(blocks.vector_source_c(data = arr, vlen = 1), blocks.probe_signal_f())
 
 		ed = EnergySSArch(
-				device = device,
 				fft_size = len(arr),
 				mavg_size = 8,
 				algorithm = EnergyDecision(expected_out - 1)
@@ -106,8 +107,7 @@ class QaEnergyDetector(gr_unittest.TestCase):
 		self.tb.add_path(ed, device, 'ed')
 		self.tb.run()
 
-		out = ed.output
-		self.assertEqual(1 , out)
+		self.assertEqual(1 , device.sink.level())
 
 	## Test EDTopBlock with a simple input (1, 2, 3, 4)
 	def test_004(self):
@@ -117,7 +117,6 @@ class QaEnergyDetector(gr_unittest.TestCase):
 		device = RadioDevice(blocks.vector_source_c(data = arr, vlen = 1), blocks.probe_signal_f())
 
 		ed = EnergySSArch(
-				device = device,
 				fft_size = len(arr),
 				mavg_size = 1,
 				algorithm = EnergyDecision(expected_out + 1)
@@ -125,7 +124,7 @@ class QaEnergyDetector(gr_unittest.TestCase):
 		self.tb.add_path(ed, device, 'ed')
 
 		out = self.tb.ed.output
-		self.assertEqual(0, out)
+		self.assertEqual(0 , device.sink.level())
 
 if __name__ == '__main__':
 	gr_unittest.main ()

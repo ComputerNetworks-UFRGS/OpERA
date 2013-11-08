@@ -18,39 +18,41 @@ Copyright 2013 OpERA
 
 ## @package device
 
-# ::TODO:: Discover how to include patches externally
-# ::TODO:: modules description
 import sys
 import os
-import random
 
+# ::TODO:: Discover how to include patches externally
+# ::TODO:: modules description
 path = os.path.abspath(os.path.join(os.path.dirname(__file__),"../../"))
 sys.path.insert(0, path)
 
-from gnuradio import blocks, gr_unittest, gr
+
+import random
 
 from time import sleep
 from math import *
 import unittest
 import matplotlib.pyplot as plt
 
+from gnuradio import blocks, gr_unittest, gr
 
 # Project imports
+from OpERAFlow import OpERAFlow
 from device import RadioDevice
 from utils  import Logger
 from algorithm import BayesLearningThreshold, WaveformDecision, FeedbackAlgorithm, AlwaysTimeFeedback
 from reception.sensing import EnergyDetectorC
-from reception.sensing import WaveformDetector 
+from reception.sensing import WaveformSSArch 
 
 # UUT
-from feedback import FeedbackTopBlock, FeedbackF
+from feedback import FeedbackSSArch, FeedbackF
 
 ## QA tests related to feeback
 class QaFeedback(gr_unittest.TestCase):
 
 	##
 	def setUp(self):
-		self.tb = gr.top_block()
+		self.tb = OpERAFlow('QaFeedback')
 
 	##
 	def tear_down(self):
@@ -59,6 +61,7 @@ class QaFeedback(gr_unittest.TestCase):
 	## Test Feedback Algorithm architecture
 	# This test validades the feedback architecture when the 'manager' says the channel is idle and the 'learner' says is occupied
 	def test_001(self):
+		print 't1'
 		data_l = [1]
 		data_m = [0]
 
@@ -80,15 +83,15 @@ class QaFeedback(gr_unittest.TestCase):
 		fb = FeedbackF( fb_algo )
 
 		# Data blocks
-		src_l = blocks.vector_source_f( data_l)
-		src_m = blocks.vector_source_f( data_m )
+		src_l = blocks.vector_source_f(data_l)
+		src_m = blocks.vector_source_f(data_m)
 
 		# Flow graph
-		self.tb = gr.top_block()
-		self.tb.connect(src_l, (fb, 0))
-		self.tb.connect(src_m, (fb, 1))
+		tb = gr.top_block()
+		tb.connect(src_l, (fb, 0))
+		tb.connect(src_m, (fb, 1))
 
-		self.tb.run()
+		tb.run()
 
 		# bayes feedback has to be 0  
 		self.assertEqual(bl_algo.feedback, 0)
@@ -121,11 +124,11 @@ class QaFeedback(gr_unittest.TestCase):
 		src_m = blocks.vector_source_f( data_m )
 
 		# Flow graph
-		self.tb = gr.top_block()
-		self.tb.connect(src_l, (fb, 0))
-		self.tb.connect(src_m, (fb, 1))
+		tb = gr.top_block()
+		tb.connect(src_l, (fb, 0))
+		tb.connect(src_m, (fb, 1))
 
-		self.tb.run()
+		tb.run()
 
 		# bayes feedback has to be 0  
 		self.assertEqual(bl_algo.feedback, 1)
@@ -157,15 +160,15 @@ class QaFeedback(gr_unittest.TestCase):
 
 		# detectors utilized
 		bl = EnergyDetectorC( fft_size, 1, bl_algo )
-		ev = WaveformDetector( fft_size, WaveformDecision(0.7) )
+		ev = WaveformSSArch( fft_size, WaveformDecision(0.7) )
 
 
 		# top block
-		self.tb = FeedbackTopBlock(device = device,
-				block_manager =  ev,
+		t = FeedbackSSArch(block_manager =  ev,
 				block_learner = bl,
 				feedback_algorithm = FeedbackAlgorithm( bl_algo, AlwaysTimeFeedback() ),
 			)
+		self.tb.add_path(t, device, 'ss')
 		self.tb.run()
 
 		# As the waveform will (probably) not detected the channel as occupied, the feedback system should decrease the threshold by 1

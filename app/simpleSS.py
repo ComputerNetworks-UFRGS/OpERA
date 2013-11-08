@@ -98,7 +98,7 @@ def clear_screen():
 def add_print_list():
 	print "\n******************************************************************\n"
 	print "\nPrinting the energy\n"
-	Logger.add_to_print_list("energy_calculator", "energy")
+	Logger.add_to_print_list("energy_decision", "energy")
 	print "\n******************************************************************\n"
 
 
@@ -107,6 +107,9 @@ def add_print_list():
 def printing_energy():
 	clear_screen()
 	key = None
+
+	time.sleep(0.1)
+	Logger._enable = True
 	
 	# Press enter to exit (stop the printing).
 	while key is not ENTER:
@@ -126,10 +129,7 @@ def device_definition():
 	uhd_source.samp_rate = 195512
 	device_source = RadioDevice(the_source = uhd_source, the_sink = blocks.probe_signal_f())
 
-	energy = EnergySSArch(device = device_source,
-				fft_size  = 512,
-				mavg_size = 5,
-				algorithm = None)
+	energy = EnergySSArch(fft_size  = 512, mavg_size = 5, algorithm = EnergyDecision(th = 0))
 
 	tb.add_path(abstract_arch = energy, radio_device = device_source, name_of_arch = 'ss')
 
@@ -175,8 +175,6 @@ def eg_set_frequency():
 				no_freq = True
 
 	
-	# print the energy
-	#printing_energy()
 	return float_freq, no_freq
 
 
@@ -230,9 +228,7 @@ def eg_main_window():
 	
 	
 ## Execution using easygui.
-def with_easygui():
-	
-	tb, radio = device_definition()
+def with_easygui(tb, radio):
 	tb.start()
 	continue_loop = True
 	no_freq = False
@@ -364,8 +360,8 @@ def console_main_menu():
 	return int_choice
 
 ## Execution using console.
-def with_terminal():
-	tb, radio = device_definition()
+def with_terminal(tb, radio):
+	radio.center_freq = 100e6
 	tb.start()
 	continue_loop = True
 
@@ -396,12 +392,19 @@ def with_terminal():
 
 ###########################################################################################
 ## Main function
-def main():
-	#if easygui_import is True:
-	#	with_easygui()
+def main(tb, radio):
 
-	#elif easygui_import is False:
-	with_terminal()
+	if easygui_import is True:
+		with_easygui(tb, radio)
+
+	elif easygui_import is False:
+		with_terminal(tb, radio)
 
 if __name__ == "__main__":
-	main()
+	tb, radio = device_definition()
+
+	try:
+		main(tb, radio)
+	except KeyboardInterrupt:
+		tb.stop()
+		Logger.dump('./dump/', '', 0)

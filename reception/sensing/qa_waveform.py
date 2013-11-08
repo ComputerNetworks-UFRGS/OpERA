@@ -28,11 +28,15 @@ import os
 path = os.path.abspath(os.path.join(os.path.dirname(__file__),"../../"))
 sys.path.insert(0, path)
 
-from gnuradio import gr, gr_unittest, fft
+
+from gnuradio import gr
+from gnuradio import gr_unittest
+from gnuradio import fft
 import numpy as np
 
-from waveformDetector import WaveformAnalyzer, WaveformTopBlock
 from device import radioDevice
+from waveform import WaveformAnalyzer
+from waveform import WaveformSSArch
 from algorithm import WaveformDecision
 
 ## QA related to Waveform class

@@ -22,7 +22,7 @@ from gnuradio import gr
 #	This class offers methods to add a tx and a rx path.
 #	Both pathes can be accessed with TopBlock.rx and TopBlock.tx properties.
 #	RX path can be a UHDAlgorithmInterface.
-class TopBlock( gr.top_block ):
+class TopBlock(gr.top_block):
 
 	## CTOR
 	# @param name  Name of the top block.

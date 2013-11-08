@@ -14,23 +14,26 @@ Copyright 2013 OpERA
   limitations under the License.
 """
 
-## @package block_utils
+"""
+@package block_utils
+"""
 
-# ::TODO:: class description
 
 # gnuradio imports
-from gnuradio     import gr, digital, blocks
-from grc_gnuradio import blks2 as grc_blks2
+from gnuradio     import gr, digital
 
 # project import
 from device 	import UHDRxArch
 
-##
 class PacketGMSKRx(UHDRxArch):
+	"""
+	"""
 
-	## CTOR
-	# @param callback
 	def __init__(self, callback):
+		"""
+		CTOR
+		@param callback Function called when a packet is received
+		"""
 
 		UHDRxArch.__init__(
 				self,
@@ -49,6 +52,3 @@ class PacketGMSKRx(UHDRxArch):
 		# Connections #
 		#             #
 		self.connect(self, self._demod)
-
-
-

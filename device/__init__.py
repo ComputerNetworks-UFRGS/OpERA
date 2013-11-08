@@ -1,9 +1,6 @@
-from uhdDevice       import *
-from uhdAbstractArch import *
-from uhdSSArch       import *
-from uhdTxPktArch    import *
-from uhdRxArch       import *
-from radioDevice     import RadioDevice
 from abstractDevice  import AbstractDevice
-from abstractSSArch  import AbstractSSArch
+from uhdDevice       import *
+from radioDevice     import RadioDevice
+
 from abstractArch    import AbstractArch
+from uhdArch import *

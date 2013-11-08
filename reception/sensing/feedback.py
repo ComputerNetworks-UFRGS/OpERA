@@ -14,18 +14,16 @@ Copyright 2013 OpERA
   limitations under the License.
 """
 
-## @package ssf
+"""
+@package ssf
+"""
+
 
 from gnuradio        import gr
-from utils           import TopBlock
-
+from device          import UHDSSArch
 import numpy as np
 
 
-## Feedback block
-# Has two inputs: 0- decision from the learning algorithm; 1- decision from the manager algorithm
-# Both inputs are passed to a controller  algorithm (self._algorithm).
-# Ideally, the frequency of both inputs should be equal (1:1)
 class FeedbackF(gr.sync_block):
 	"""
 	Feedback block
@@ -35,9 +33,11 @@ class FeedbackF(gr.sync_block):
 	Ideally, the frequency of both inputs should be equal (1:1)
 	"""
 
-	## CTOR
-	#@param algorithm AbstractAlgorithm implementation. Should implement a decision function with received two parameters
 	def __init__(self, algorithm):
+		"""
+		CTOR
+		@param algorith AbstractAlgorithm. Must implement algorithm.decision(param1, param2)
+		"""
 
 		# initialize base class
 		gr.sync_block.__init__(
@@ -50,10 +50,12 @@ class FeedbackF(gr.sync_block):
 		# algorithm de feedback
 		self._algorithm = algorithm
 
-	## GNURadio loop function
-	# @param input_items
-	# @param output_items
 	def work(self, input_items, output_items):
+		"""
+		GNURadio loop function.
+		@param input_items
+		@param output_items
+		"""
 
 		in0 = input_items[0][0] # learner
 		in1 = input_items[1][0] # manager
@@ -62,7 +64,8 @@ class FeedbackF(gr.sync_block):
 
 		return len(input_items[0])
 
-class FeedbackArch(gr.hier_block2):
+
+class FeedbackSSArch( UHDSSArch ):
 	"""
 	Feedback Architecture.
 
@@ -84,7 +87,7 @@ class FeedbackArch(gr.hier_block2):
         @param feedback_algorithm Feedback Algorithm
 		"""
 
-		gr.hier_block2.__init__( 
+		UHDSSArch.__init__( 
 				self,
 				name = "feedback_arch",
 				input_signature  = gr.io_signature(1, 1, gr.sizeof_gr_complex),
@@ -93,10 +96,6 @@ class FeedbackArch(gr.hier_block2):
 
 		# feedback block
 		self.fb = FeedbackF( feedback_algorithm ) 	
-
-		# dump file
-		#self._file = gr.file_sink( gr.sizeof_gr_complex, '/tmp/signal.bin')
-		#self.connect(self, self._file)
 
 		# source -> ss algorithm (learning) -> sink 
 		self.connect(self, block_learner, self)
@@ -111,35 +110,6 @@ class FeedbackArch(gr.hier_block2):
 		self.connect(block_manager, (self.fb, 1))
 
 
-class FeedbackTopBlock(TopBlock):
-	"""
-	A Feedback top block
-	"""
 
-	def __init__(self,
-			device,
-			block_manager,
-			block_learner,
-			feedback_algorithm):
-		"""
-		CTOR
-
-		@param device             Device ( a OpERAFlow object)
-		@param block_manager      Sensing block that is considered always correct
-		@param block_learner      Sensing block which threshold is adjusted
-		@param feedback_algorithm Feedback Algorithm
-		@param use_throttle       To use a throttle control before the FeedbackF
-		"""
-
-		TopBlock.__init__(self, "Feedback Topblock")
-
-		arch = FeedbackArch( 
-				block_manager = block_manager,
-				block_learner = block_learner,
-				feedback_algorithm = feedback_algorithm
-			)
-
-		self.connect(device.source, arch, device.sink)
-
-		self.rx        = device
-		self.algorithm = arch
+	def _get_sensing_data(self, channel, sensing_time):
+		return 0
