@@ -1,0 +1,32 @@
+<block>
+  <name>Stream to vector overlap</name>
+  <key>opera_stream_to_vector_overlap</key>
+  <category>OPERA</category>
+  <import>import opera</import>
+  <make>opera.stream_to_vector_overlap($item_size, $nitems_per_block, $overlap)</make>
+  <param>
+    <name>Item_size</name>
+    <key>item_size</key>
+    <type>raw</type>
+  </param>
+  <param>
+    <name>Nitems_per_block</name>
+    <key>nitems_per_block</key>
+    <type>raw</type>
+  </param>
+  <param>
+    <name>Overlap</name>
+    <key>overlap</key>
+    <type>int</type>
+  </param>
+  <sink>
+    <name>in</name>
+    <type>byte</type>
+    <vlen>$item_size</vlen>
+  </sink>
+  <source>
+    <name>out</name>
+    <type>byte</type>
+    <vlen>$item_size *  nitems_per_block</vlen>
+  </source>
+</block>

@@ -18,81 +18,49 @@ Copyright 2013 OpERA
 @package algorithm
 """
 
-from gnuradio import gr
+from gnuradio import gr #pylint: disable=F0401
+
+# OpERA imports
+from device import UHDBase
 
 class OpERAFlow(gr.top_block):
-	"""
-	Interface to interact with a UHD and some other object 
-	"""
+    """
+    """
 
-	# Constants to specify the connection type
-	CONN_SOURCE = 0b001
-	CONN_SINK   = 0b010
-	CONN_SOURCE_SINK = CONN_SOURCE | CONN_SINK
-
-	def __init__(self, name):
-		"""
-		CTOR
-		@param name
-		"""
-		object.__setattr__(self, '_dict_of_archs', {})
-		gr.top_block.__init__(self, name = name)
+    def __init__(self, name):
+        """
+        CTOR
+        @param name
+        """
+        object.__setattr__(self, '_dict_of_archs', {})
+        gr.top_block.__init__(self, name = name)
 
 
-	def add_path(self, abstract_arch, radio_device, name_of_arch, connection_type = CONN_SOURCE_SINK):
-		"""
-		Add an abstract archicteture to be manageable through OpERA and allow an instance of the OpERAFlow class to call modules from a given abstract architeture
-		@param abstract_arch
-		@param radio_device
-		@param name_of_arch
-		@param connection_type
-		"""
+    def start(self, max_noutput_items = 1024):
+        """
+        Override gr.top_block method.
+        @param max_noutput_items From gnuradio::top_block defaults.
+        """
+        self._connect_all_pending()
 
-		# abstract_arch must be an instance of some abstract architeture class.
-		self._dict_of_archs[name_of_arch] = abstract_arch
-
-		setattr(self, name_of_arch, abstract_arch)
-
-		if radio_device:
-			if radio_device.source and (connection_type & OpERAFlow.CONN_SOURCE):
-				self.connect(radio_device.source, abstract_arch)
-
-			if radio_device.sink and (connection_type & OpERAFlow.CONN_SINK):
-				self.connect(abstract_arch, radio_device.sink)
-
-			abstract_arch.set_radio_device( radio_device )
+        gr.top_block.start(self, max_noutput_items)
 
 
-	def __getattr__(self, name):
-		"""
-		Redefinition of the getattr for the class
-		"""
-		if name == "_dict_of_archs":
-			return object.getattr(self, "_dict_of_archs")
-		else:
-			for key in self._dict_of_archs:
-				if hasattr(self._dict_of_archs[key], name):
-					return self._dict_of_archs[key].name
+    def add_radio(self, radio, name):
+        """
+        @param radio
+        @param name
+        """
+        self._dict_of_archs[name] = radio #pylint: disable=E1101
+        radio.set_top_block( self )
 
-		raise AttributeError("%r object has no attribute %s" % (self.__class__, name))
+        setattr(self, name, radio)
 
 
-	def __setattr__ (self, name, val):
-		"""
-		Redefinition of the setattr for the class
-		"""
-		tmp = None
-
-		# in add_path
-		if name in self._dict_of_archs:
-			tmp = self._dict_of_archs[name]
-		# common attribution
-		else:
-			object.__setattr__(self, name, val)
-			return
-			
-		if tmp:
-			setattr(OpERAFlow, name, tmp)
-			return 
-
-		raise AttributeError
+    def _connect_all_pending(self):
+        """
+        Perform all conections.
+        """
+        # For each radio, perform its connections
+        for radio in  self._dict_of_archs.values(): #pylint: disable=E1101
+            radio.connect()

@@ -14,86 +14,296 @@ Copyright 2013 OpERA
   limitations under the License.
 """
 
+from gnuradio import gr #pylint: disable=F0401
+
 from abstractDevice import AbstractDevice
-from gnuradio import uhd
 from uhdDevice import *
+from uhdArch   import *
 
-## USRP implementation of a AbstractDevice.
-# For now, only the main properties are interfaced:
-#    - gain, center_freq and sample_rate
+import time
+
+class APath(object):
+    """
+    Class to handle a single path connection/disconnection
+    """
+
+    PENDING   = 0
+    CONNECTED = 1
+    DISABLED  = 2
+
+    def __init__(self, source, arch, sink):
+        """
+        CTOR
+        @param source 
+        @param arch
+        @param sink
+        """
+
+        if isinstance(source, UHDBase):
+               source = source.uhd
+        if isinstance(sink, UHDBase):
+               sink = sink.uhd
+
+        self._source = source
+        self._arch   = arch
+        self._sink   = sink
+
+        self._state = APath.PENDING
+
+    def __hasattr__(self, name):
+        if hasattr(self._source, name):
+            return hasattr(self._source, name)
+        elif hasattr(self._arch, name):
+            return hasattr(self._arch, name)
+        elif hasattr(self._sink, name):
+            return hasattr(self._sink, name)
+
+        raise AttributeError
+
+    def __getattr__(self, name):
+        if hasattr(self._source, name):
+            return getattr(self._source, name)
+        elif hasattr(self._arch, name):
+            return getattr(self._arch, name)
+        elif hasattr(self._sink, name):
+            return getattr(self._sink, name)
+
+
+    def connect(self, tb):
+        """
+        @param tb An OpERAFlow instance.
+        """
+        if self.is_connected():
+            return
+
+        isinstance(self._source, UHDBaseArch) and self._source.pre_connect(tb)
+        isinstance(self._sink, UHDBaseArch)   and self._sink.pre_connect(tb)
+        isinstance(self._arch, UHDBaseArch)   and self._arch.pre_connect(tb)
+
+        if self._arch:
+            self._source and tb.connect(self._source, self._arch)
+            self._sink   and tb.connect(self._arch, self._sink)
+        else:
+            self._source and self._sink and tb.connect(self._source, self._sink)
+
+        self._state = APath.CONNECTED
+
+
+    def disconnect(self, tb):
+        """
+        @param tb OpERAFlow instance.
+        """
+
+        if not self.is_connected():
+            return
+
+        if self._arch:
+            self._source and tb.disconnect(self._source, self._arch)
+            self._sink   and tb.disconnect(self._arch, self._sink)
+        else:
+            self._source and self._sink and tb.disconnect(self._source, self._sink)
+
+        self._state = APath.DISABLED
+
+
+    def get_state(self):
+        """
+        """
+        return self._state
+
+    def is_connected(self):
+        """
+        """
+        return self._state == APath.CONNECTED
+
+    def is_disabled(self):
+        """
+        """
+        return self._state == APath.DISABLED
+
+    def is_pending(self):
+        """
+        """
+        return self._state == APath.PENDING
+
+
 class RadioDevice(AbstractDevice):
+    """
+    """
 
-	## CTOR
-	# @param the_source Source of data
-	# @param the_sink sink of data
-	def __init__(self, the_source, the_sink, uhd_device = None, name="RadioDevice"):
+    def __init__(self, name="RadioDevice"):
+        """
+        CTOR
+        """
+        AbstractDevice.__init__(self, name=name)
 
-		AbstractDevice.__init__(self, name=name)
+        # Dictionary of all UHD devices
+        # Dictionary of AbstractArch of this radio device
+        self._dict_of_uhds     = {}
+        self._dict_of_archs    = {}
 
-		self._source = the_source
-		self._sink = the_sink
-		self._uhd = uhd_device or the_source
 
-	## source property
-	@property
-	def source(self):
+        self._tb = None
+        # We need this flag because lock/unlock in OpERAFlow is not working
+        # To avoid  performing the "RadioDevice::connect" 1+ times, we control it with this flag.
+        self._pending_done = False
 
-		# Check if _uhd is a UHDBase object.
-		# If it is, return its the uhd property.
-		if isinstance(self._source, UHDBase):
-			return self._source.uhd
 
-		return self._source
+    def add_arch(self, source, sink, arch, name, uhd_device):
+        """
+        Add a reference to a arch in which this radio_device.is a source/sink.
+        @param source Arch source.
+        @param sink Architecture sink.
+        @param arch AbstractArch device implementation.
+        @param name Name Name of the architecture.
+        @param uhd_device UHD device. Should be source or sink.
+        """
 
-	## sink property
-	@property
-	def sink(self):
+        # The arch has a reference to the radio.
+        if hasattr(arch, 'set_radio_device'):
+            arch.set_radio_device( uhd_device )
 
-		# Check if _uhd is a UHDBase object.
-		# If it is, return its the uhd property.
-		if isinstance(self._sink, UHDBase):
-			return self._sink.uhd
+        self._dict_of_archs[ name ] = APath(source = source, arch = arch, sink = sink)
+        self._dict_of_uhds [ name ] = uhd_device
 
-		return self._sink
+        # makes the name be accessible by doing radio.$name
+        setattr(self, name, self._dict_of_archs[name])
 
-	## UHD property
-	@property
-	def uhd(self):
-		tmp = self._uhd
 
-		# Check if _uhd is a UHDBase object.
-		# If it is, return its the uhd property.
-		if isinstance(self._uhd, UHDBase):
-			tmp = self._uhd.uhd
+    def disable_arch(self, name):
+        """
+        """
+        # Arch is not enabled
+        if not name in self._dict_of_archs :
+            raise AttributeError
 
-		return tmp
+        # ::TRICKY::
+        # lock()/unlock() are not working  with python sync blocks.
+        # So, we use stop/wait/start
+        # For more info check the link:
+        # http://gnuradio.org/redmine/issues/594
+        self._tb.stop()
+        self._tb.wait()
 
-	## Specific center frequency getter property for UHD devices
-	# @abstract
-	def _get_center_freq(self):
-		return self.uhd.get_center_freq()
+        self._dict_of_archs[ name ].disconnect(self._tb)
 
-	## Specific center frequency setter property for UHD devices
-	# @abstract
-	def _set_center_freq(self, center_freq):
-		self.uhd.set_center_freq(center_freq)
+        self._tb.start()
 
-	## Specific sample rate getter property for UHD devices
-	def _get_samp_rate(self):
-		return self.uhd.get_samp_rate()
+    def enable_arch(self, name):
+        """
+        """
+        # Arch is not enabled
+        if not name in self._dict_of_archs:
+            raise AttributeError
 
-	## Specific sample rate setter property for UHD devices
-	def _set_samp_rate(self, samp_rate):
-		self.uhd.set_samp_rate(samp_rate)
+        self._tb.stop()
+        self._tb.wait()
 
-	## Specific gain getter property for UHD devices
-	def _get_gain(self):
-		return self.uhd.get_gain()
+        self._dict_of_archs[ name ].connect(self._tb)
 
-	## Specific gain setter property for UHD devices
-	def _set_gain(self, gain):
-		self.uhd.set_gain(gain)
+        self._tb.start()
 
-	@property
-	def my_str(self):
-		return "it's handled"
+
+    def connect(self):
+        """
+        """
+        if self._pending_done:
+            return
+
+        self._pending_done = True
+        for x in self._dict_of_archs.itervalues():
+            x.connect(self._tb)
+
+
+
+    def set_top_block(self, tb):
+        """
+        """
+        self._tb = tb
+
+
+    def __getattr__(self, name):
+        """
+        Search for a parameter/function in all archs of this Radio.
+        So, a programer that doed radio.function, activates this __getattr__
+        function, which searches for 'function' in all architectures.
+
+        @param name Name of parameter/function.
+        """
+        if name == "_dict_of_archs":
+            return object.getattr(self, "_dict_of_archs") #pylint: disable=E1101
+        else:
+            # search for method in the architectures
+            for key in self._dict_of_archs:
+                if hasattr(self._dict_of_archs[key], name):
+                    return getattr(self._dict_of_archs[key], name)
+
+        raise AttributeError("%r object has no attribute %s" % (self.__class__, name))
+
+
+### Implementations required for the AbstractDevice
+
+    def __getter(self, str_callback):
+        """
+        A gereric getter for this class.
+        @param str_callback String with the name of the real getter function.
+        """
+        arr = []
+        for uhd in self._dict_of_uhds.values():
+            uhd and arr.append( getattr(uhd, str_callback)() )
+        return arr
+
+    def _get_center_freq(self):
+        """
+        """
+        return self.__getter('get_center_freq')
+
+
+    def _set_center_freq(self, center_freq):
+        """
+        """
+        for uhd in self._dict_of_uhds.values():
+            uhd and uhd.set_center_freq(center_freq)
+
+        return center_freq
+
+    def _get_samp_rate(self):
+        """
+        """
+        return self.__getter('get_samp_rate')
+
+
+    def _set_samp_rate(self, samp_rate):
+        """
+        """
+        for uhd in self._dict_of_uhds.values():
+            uhd and uhd.set_samp_rate(samp_rate)
+
+        return samp_rate
+
+
+    def _get_gain(self):
+        """
+        """
+        return self.__getter('get_gain')
+
+
+    def _set_gain(self, gain):
+        """
+        """
+        for uhd in self._dict_of_uhds.values():
+            uhd and uhd.set_gain(gain)
+
+        return gain
+
+
+    def _get_bandwidth(self):
+        return self.__getter('get_bandwidth')
+
+    def _set_bandwidth(self, bw):
+        """
+        """
+        for uhd in self._dict_of_uhds.values():
+            uhd and uhd.set_bandwidth(bw)
+
+        return bw

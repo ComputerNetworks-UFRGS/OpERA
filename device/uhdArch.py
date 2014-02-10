@@ -19,202 +19,342 @@ Copyright 2013 OpERA
 @package device
 """
 
-from abc import ABCMeta, abstractmethod
+import time
+from abc import ABCMeta
+from abc import abstractmethod
 
-from gnuradio import gr
-from abstractArch import AbstractArch
+from gnuradio import gr #pylint: disable=F0401
 
-class UHDAbstractArch(AbstractArch, gr.hier_block2):
-	"""
-	Abstract class for the UHD architectures.
-	This is the base class for UHD architectures.
-	"""
-	
-	def __init__(self, name, input_signature, output_signature):
-		"""
-		CTOR
-		@param name
-		@param input_signature
-		@param output_signature
-		"""
-		object.__setattr__(self, '_radio_device', None)
-
-		AbstractArch.__init__(self, name=name)
-		gr.hier_block2.__init__(
-				self,
-				name =  name,
-				input_signature  = input_signature,
-				output_signature = output_signature,
-			)
+# OpERA imports
+from OpERABase    import OpERABase          #pylint: disable=F0401
+from abstractArch import AbstractSSArch
+from abstractArch import AbstractTxPktArch
+from abstractArch import AbstractRxPktArch
 
 
-	def set_radio_device(self, radio_device):
-		"""
-		Set the radio device used for this UHDAbstractArch.
-		@param radio_device
-		"""
-		self._radio_device = radio_device
+class UHDBaseArch(gr.hier_block2):
+    """
+    Abstract class for the UHD architectures.
+    This is the base class for UHD architectures.
+    """
+
+    def __init__(self, name, input_signature, output_signature):
+        """
+        CTOR
+        @param name Instance name.
+        @param input_signature.
+        @param output_signature.
+        """
+        object.__setattr__(self, "_radio_device", None)
+
+        gr.hier_block2.__init__(
+                self,
+                name =  name,
+                input_signature  = input_signature,
+                output_signature = output_signature,
+            )
+
+        self.__initialized = False
+
+        self._blocks = []
 
 
-	def __getattr__(self, name):
-		"""
-		Intercept any call and forward it to the radio device if possible
-		@param name Attribute name
-		"""
-		if self._radio_device and hasattr(self._radio_device, name):
-			return getattr(self._radio_device, name)
+    @abstractmethod
+    def pre_connect(self, top_block):
+        """
+        Called before the connection is made.
+        In this function, the hier_block2 internal blocks must be connected
 
-		# ::TRICKY::
-		# GNURadio uses this return in the connect(...) function
-		return gr.hier_block2.__getattr__(self, name)
+        @param top_block TopBlock
+        """
+        if self.__initialized:
+            return
 
+        for blocks in self._blocks:
+            if len(blocks) > 1:
+                self.connect( *blocks ) # pylint: disable=E1101
 
-	@property
-	def radio(self):
-		"""
-		"""
-		if self._radio_device is not None:
-			return self._radio_device
-
-		raise AttributeError('radio is None')
+        self.__initialized = True
 
 
-class UHDSSArch(UHDAbstractArch):
-	"""
-	Base architecture to spectrum sensing with UHD devices.
-	This is the base class for all rx with spectrum sensing paths utilized in the TopBlock class.
-	"""
-
-	__metaclass__ = ABCMeta
-
-	def __init__(self, name, input_signature, output_signature):
-		"""
-		CTOR
-		@param radio            RadioDevice
-		@param name             SS Arch instance name
-		@param input_signature  A gr.io_signature instance.
-		@param output_signature A gr.io_signature instance.
-		"""
-		UHDAbstractArch.__init__(self, name = name,
-				input_signature  = input_signature,
-				output_signature = output_signature
-			)
+    def _add_connections(self, blocks):
+        self._blocks.append( blocks )
 
 
-	@abstractmethod
-	def _get_sensing_data(self, channel, sensing_time):
-		"""
-		Sense channel and return data.
-		The channel frequency is already configured when this method is called.
-		@param channel Channel object. 
-		@param sensing_time Sensing duration.
-		@return Sensing data.
-		"""
-		pass
+    def get_connections(self):
+        """
+        """
+        return self._blocks
 
 
-	def sense_channel(self, channel, sensing_time):
-		"""
-		SS on a single channel.
-		Implements AbstractSSArch abstract method.
-		@param the_channel Channel to be sensed.
-		@param sensing_time Sensing duration on channel.
-		"""
-
-		# save -> sense -> restore
-
-		prev_freq = self.radio.center_freq
-
-		res =  self._get_sensing_data( channel, sensing_time )
-		self.radio.center_freq = prev_freq
-
-		return res
+    def set_radio_device(self, radio_device):
+        """
+        Set the radio device used for this UHDBaseArch.
+        @param radio_device
+        """
+        self._radio_device = radio_device
 
 
-	def sense_channel_list(self, channel_list, sensing_time):
-		"""
-		Sense a list of channels.
-		@param the_list     List of channels to sense.
-		@param sensing_time Sensing duration in each channel.
-		@return Sensing information of all channels.
-		"""
-		data = []
+    @property
+    def radio(self):
+        """
+        """
+        if self._radio_device is not None:
+            return self._radio_device
 
-		for channel in the_list:
-			d = self.sense_channel(channel, sensing_time)
-			data.append(d)
+        raise AttributeError('Radio is None')
 
-		return data
+class UHDGenericArch(UHDBaseArch, OpERABase):
+    """
+    """
 
+    __metaclass__ = ABCMeta
 
-
-class UHDTxPktArch(UHDAbstractArch):
-	"""
-	Base architecture to send packets with UHD devices
-	"""
-
-	__metaclass__ = ABCMeta
-
-	def __init__(self,
-			name,
-			input_signature,
-			output_signature):
-		"""
-		CTOR
-		@param name
-		@param input_signature
-		@param output_signature
-		"""
-
-		self._modulator = self._build()
-
-		UHDAbstractArch.__init__(self, name, input_signature, output_signature)
+    def __init__(self, name, input_signature, output_signature):
+        """
+        CTOR
+        @param name             SS Arch instance name
+        @param input_signature  A gr.io_signature instance.
+        @param output_signature A gr.io_signature instance.
+        """
+        OpERABase.__init__(self, name = name)
+        UHDBaseArch.__init__(self, name = name,
+                input_signature  = input_signature,
+                output_signature = output_signature
+            )
 
 
-		if input_signature.min_streams():
-			self.connect(self, self._modulator)
+        self._block = self._build(input_signature, output_signature)
 
-		if output_signature.min_streams():
-			self.connect(self._modulator, self)
+        # Connect input/outputs if necessary
+        """
+        ::TODO::
+        Pass this code to UHDBaseArch. Maybe in the pre_process function ?
+        """
+        blocks = []
+        if input_signature.min_streams():
+            blocks.append(self)
 
+        blocks.append( self._block )
 
-	@abstractmethod
-	def _build(self):
-		"""
-		Build internal blocks  of the architecture. 
-		@return Architecture
-		"""
-		pass
-
-	def send_pkt(self, payload, eof = False):
-		"""
-		Transmit the payload using a implementation specific modulator
-		"""
-		self._modulator.send_pkt(payload, eof)
+        if output_signature.min_streams():
+            blocks.append( self ) #pylint: disable=E1101
+        self._add_connections( blocks )
 
 
-class UHDRxArch(UHDAbstractArch):
-	"""
-	Receive data through USRP
-	This is the base class for the rx devices.
-	"""
-
-	def __init__(self, name, input_signature, output_signature):
-		"""
-		CTOR
-		@param name
-		@param input_signature
-		@param output_signature
-		"""
-		UHDAbstractArch.__init__(self, name = name,
-				input_signature = input_signature,
-				output_signature= output_signature
-			)
+    @abstractmethod
+    def _build(self, input_signature, output_signature):
+        """
+        Build internal blocks  of the architecture.
+        @param callback Callback function.
+        @param input_signature  A gr.io_signature instance.
+        @param output_signature A gr.io_signature instance.
+        @return A GNURadio source block.
+        """
+        pass
 
 
-	def receive_pkt(self):
-		"""
-		::TRICKY:: NOT USED
-		Received a Packet.
-		"""
-		self._modulator.receive_pkt()
+class UHDSSArch(UHDBaseArch, AbstractSSArch):
+    """
+    Base architecture for spectrum sensing with UHD devices.
+    """
+
+    __metaclass__ = ABCMeta
+
+    def __init__(self, name, input_signature, output_signature):
+        """
+        CTOR
+        @param name             SS Arch instance name
+        @param input_signature  A gr.io_signature instance.
+        @param output_signature A gr.io_signature instance.
+        """
+        AbstractSSArch.__init__(self, name)
+        UHDBaseArch.__init__(self, name = name,
+                input_signature  = input_signature,
+                output_signature = output_signature
+            )
+
+        self._sensing = self._build(input_signature, output_signature)
+        # Connect input/outputs if necessary
+        if self._sensing:
+            """
+            ::TODO::
+            Pass this code to UHDBaseArch. Maybe in the pre_process function ?
+            """
+            blocks = []
+            if input_signature.min_streams():
+                blocks.append(self)
+
+            blocks.append( self._sensing )
+
+            if output_signature.min_streams():
+                blocks.append( self ) #pylint: disable=E1101
+            self._add_connections( blocks )
+
+
+    @abstractmethod
+    def _build(self, input_signature, output_signature):
+        """
+        Build internal blocks  of the architecture.
+        @param callback Callback function.
+        @param input_signature  A gr.io_signature instance.
+        @param output_signature A gr.io_signature instance.
+        @return A GNURadio source block.
+        """
+        pass
+
+
+    def sense_channel(self, channel, sensing_duration):
+        """
+        SS on a single channel.
+        Implements AbstractSSArch abstract method.
+        @param the_channel Channel to be sensed.
+        @param sensing_time Sensing duration on channel.
+        @return Tuple (decision, energy)
+        """
+        # save -> sense -> restore
+
+        prev_channel = self.radio.get_channel()
+
+        self.radio.set_channel(channel)
+        res =  self._get_sensing_data( channel, sensing_duration )
+
+        prev_channel and self.radio.set_channel(prev_channel)
+
+        return res
+
+
+    @abstractmethod
+    def _get_sensing_data(self, channel, sensing_duration):
+        """
+        Sense channel and return data.
+        The channel frequency is already configured when this method is called.
+        @param channel Channel object.
+        @param sensing_time Sensing duration.
+        @return Sensing data.
+        """
+        pass
+
+
+class UHDTxPktArch(UHDBaseArch, AbstractTxPktArch):
+    """
+    Base architecture to send packets with UHD devices
+    """
+
+    __metaclass__ = ABCMeta
+
+    def __init__(self,
+            name,
+            input_signature,
+            output_signature):
+        """
+        CTOR
+        @param name             Instance name.
+        @param input_signature  A gr.io_signature instance.
+        @param output_signature A gr.io_signature instance.
+        """
+        AbstractTxPktArch.__init__(self, name)
+        UHDBaseArch.__init__(self, name = name,
+                input_signature  = input_signature,
+                output_signature = output_signature
+            )
+
+        # Derived class implementation
+        self._modulator = self._build(input_signature, output_signature)
+
+        # Connect input/outputs if necessary
+        """
+        ::TODO::
+        Pass this code to UHDBaseArch. Maybe in the pre_process function ?
+        """
+        blocks = []
+        if input_signature.min_streams():
+            blocks.extend([self, self._modulator])
+        if output_signature.min_streams():
+            blocks.append( self ) #pylint: disable=E1101
+
+        self._add_connections( blocks )
+
+
+    @abstractmethod
+    def _build(self, input_signature, output_signature):
+        """
+        Build internal blocks  of the architecture.
+        @return A GNURadio sink block.
+        """
+        pass
+
+    def _send_pkt(self, payload, eof = False):
+        """
+        Transmit the payload using a implementation specific modulator
+        @param payload A struct type
+        @param eof True/False
+        """
+        self._modulator.send_pkt(payload, eof)
+        # We cannot send too much packets because GNURadio buffers then in memory
+        time.sleep(0.01)
+
+
+class UHDRxPktArch(UHDBaseArch, AbstractRxPktArch):
+    """
+    Receive data through USRP
+    This is the base class for the rx devices.
+    """
+    __metaclass__ = ABCMeta
+
+    def __init__(self,
+            name,
+            callback,
+            input_signature,
+            output_signature):
+        """
+        CTOR
+        @param name Instance name.
+        @param Callback callback function with signature (self, payload).
+        @param input_signature  A gr.io_signature instance.
+        @param output_signature A gr.io_signature instance.
+        """
+        AbstractRxPktArch.__init__(self, name)
+        UHDBaseArch.__init__(self, name = name,
+                input_signature = input_signature,
+                output_signature= output_signature
+            )
+
+        # keep callback
+        self._callback = callback
+
+        # Build demodulator
+        self._demod = self._build(self._pkt_rx_callback, input_signature, output_signature)
+
+        # Connect input/outputs if necessary
+        """
+        ::TODO::
+        Pass this code to UHDBaseArch. Maybe in the pre_process function ?
+        """
+        blocks = []
+        if input_signature.min_streams():
+            blocks.extend( [self, self._demod ]) #pylint: disable=E1101
+        if output_signature.min_streams():
+            blocks.append( self ) #pylint: disable=E1101
+        self._add_connections( blocks )
+
+
+    @abstractmethod
+    def _build(self, callback, input_signature, output_signature):
+        """
+        Build internal blocks  of the architecture.
+        @param callback Callback function.
+        @param input_signature  A gr.io_signature instance.
+        @param output_signature A gr.io_signature instance.
+        @return A GNURadio source block.
+        """
+        pass
+
+    def _pkt_rx_callback(self, ok, payload):
+        """
+        Wraps the callback necessary in the GNU Radio reception.
+        Firstly, we contabilize the payload in the PktBitRate class, after
+        we call the callback received in the CTOR or we queue the payload
+        """
+        self._counter.count(payload)
+        self._callback(ok, payload)

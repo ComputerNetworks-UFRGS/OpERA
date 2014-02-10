@@ -32,7 +32,7 @@ from utils import Verify
 # Other modules needed
 from device.radioDevice   import RadioDevice
 from algorithm.decision   import EnergyDecision
-from reception.sensing    import EnergySSArch
+from gr_blocks.sensing    import EnergySSArch
 from device import *
 
 ## Test algorithm 
@@ -40,96 +40,96 @@ from device import *
 
 class QaAlgorithm(unittest.TestCase):
 
-	## Test OpERAFlow
-	def test_uhd_001(self):
-		algorithm = EnergyDecision(10)
-		opera = OpERAFlow("uhd_device")
-		opera.add_path(algorithm, None, "energy_decision")
+    ## Test OpERAFlow
+    def test_uhd_001(self):
+        algorithm = EnergyDecision(10)
+        opera = OpERAFlow("uhd_device")
+        opera.add_arch(algorithm, None, "energy_decision")
 
-		self.assertEqual(opera.energy_decision.threshold, 10)
-		opera.energy_decision.threshold = 11
-		self.assertEqual(opera.energy_decision.threshold, 11)
+        self.assertEqual(opera.energy_decision.threshold, 10)
+        opera.energy_decision.threshold = 11
+        self.assertEqual(opera.energy_decision.threshold, 11)
 
-	## Test UHDAlgorithm  with a EDTopblock
-	# In this test the energy outputed is greater than the threshold
-	def test_uhd_002(self):
-		expected_result =  1
+    ## Test UHDAlgorithm  with a EDTopblock
+    # In this test the energy outputed is greater than the threshold
+    def test_uhd_002(self):
+        expected_result =  1
 
-		# ::TRICKY:: ED output is different from the sum os arr elements
-		arr = (1, 1, 1, 1, 1, 1, 1, 1) 
-		threshold = 1 
+        # ::TRICKY:: ED output is different from the sum os arr elements
+        arr = (1, 1, 1, 1, 1, 1, 1, 1) 
+        threshold = 1 
 
-		device = RadioDevice(the_source = blocks.vector_source_c(data = arr, vlen = 1),
-				the_sink = blocks.probe_signal_f(), uhd_device = None )
+        device = RadioDevice(the_source = blocks.vector_source_c(data = arr, vlen = 1),
+                the_sink = blocks.probe_signal_f(), uhd_device = None )
 
-		ed = EnergySSArch(
-				fft_size = len(arr),
-				mavg_size = 1,
-				algorithm = EnergyDecision(threshold)
-			)
+        ed = EnergySSArch(
+                fft_size = len(arr),
+                mavg_size = 1,
+                algorithm = EnergyDecision(threshold)
+            )
 
-		opera = OpERAFlow("ed_device")
-		opera.add_path(ed, device, "ed")
-		opera.run()
+        opera = OpERAFlow("ed_device")
+        opera.add_arch(ed, device, "ed")
+        opera.run()
 
-		# Channel must be declared as occupied
-		self.assertEqual(expected_result , opera.ed.radio.sink.level())
+        # Channel must be declared as occupied
+        self.assertEqual(expected_result , opera.ed.radio.sink.level())
 
 
-	## Test UHDAlgorithm  with a EDTopblock
-	# In this test the energy outputed is less than the threshold
-	def test_uhd_003(self):
-		expected_result = 0
+    ## Test UHDAlgorithm  with a EDTopblock
+    # In this test the energy outputed is less than the threshold
+    def test_uhd_003(self):
+        expected_result = 0
 
-		# ::TRICKY:: ED output is different from the sum os arr elements
-		arr = (1, 1, 1, 1)
-		threshold = 1000
+        # ::TRICKY:: ED output is different from the sum os arr elements
+        arr = (1, 1, 1, 1)
+        threshold = 1000
 
-		device = RadioDevice(the_source = blocks.vector_source_c(data = arr, vlen = 1),
-				the_sink = blocks.probe_signal_f())
+        device = RadioDevice(the_source = blocks.vector_source_c(data = arr, vlen = 1),
+                the_sink = blocks.probe_signal_f())
 
-		ed = EnergySSArch(
-				fft_size = len(arr),
-				mavg_size = 1,
-				algorithm = EnergyDecision(threshold)
-			)
+        ed = EnergySSArch(
+                fft_size = len(arr),
+                mavg_size = 1,
+                algorithm = EnergyDecision(threshold)
+            )
 
-		opera = OpERAFlow("ed_device")
-		opera.add_path(ed, device, "ed")
-		opera.run()
+        opera = OpERAFlow("ed_device")
+        opera.add_arch(ed, device, "ed")
+        opera.run()
 
-		self.assertEqual(expected_result , opera.ed.radio.sink.level())
+        self.assertEqual(expected_result , opera.ed.radio.sink.level())
 
-	## check if parameters are ok
-	def test_parameters01(self):
+    ## check if parameters are ok
+    def test_parameters01(self):
 
-		arr = (1, 1, 1, 1)
-		threshold = 1000
+        arr = (1, 1, 1, 1)
+        threshold = 1000
 
-		device = RadioDevice(the_source = blocks.vector_source_c(data = arr, vlen = 1),
-				the_sink = blocks.probe_signal_f())
+        device = RadioDevice(the_source = blocks.vector_source_c(data = arr, vlen = 1),
+                the_sink = blocks.probe_signal_f())
 
-		ed = EnergySSArch(
-				fft_size = len(arr),
-				mavg_size = 1,
-				algorithm = EnergyDecision(threshold)
-			)
+        ed = EnergySSArch(
+                fft_size = len(arr),
+                mavg_size = 1,
+                algorithm = EnergyDecision(threshold)
+            )
 
-		opera = OpERAFlow("ed_device")
-		opera.add_path(ed, device, "ed")
+        opera = OpERAFlow("ed_device")
+        opera.add_arch(ed, device, "ed")
 
-		a = 12
-		b = 9090
-		list_error, check_attr = Verify.check_parameters([a, b, device, ed], [(0, 12), [9, 89, 9090, 189], AbstractDevice, AbstractDevice])
-		print "checking attr"
-		if check_attr is True:
-			print "parameters ok"
-		else:
-			print "error"
+        a = 12
+        b = 9090
+        list_error, check_attr = Verify.check_parameters([a, b, device, ed], [(0, 12), [9, 89, 9090, 189], AbstractDevice, AbstractDevice])
+        print "checking attr"
+        if check_attr is True:
+            print "parameters ok"
+        else:
+            print "error"
 
-		print list_error
-	
+        print list_error
+    
 
 
 if __name__ == '__main__':
-	unittest.main()
+    unittest.main()

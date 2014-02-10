@@ -40,32 +40,32 @@ from reception.packet import PacketGMSKRx
 ## Test UHD device
 class QaUHD(unittest.TestCase):
 
-	## Test RadioDevice instantiation
-	## @TODO Create a dummy UHD device
-	def test_001(self):
-		source = blocks.vector_source_c( [1] * 8 )
-		sync = blocks.probe_signal_f()
+    ## Test RadioDevice instantiation
+    ## @TODO Create a dummy UHD device
+    def test_001(self):
+        source = blocks.vector_source_c( [1] * 8 )
+        sync = blocks.probe_signal_f()
 
-		dev = RadioDevice(source, sync)
+        dev = RadioDevice(source, sync)
 
-	def test_uhd_001(self):
-		rx_uhd = PacketGMSKRx(10)
+    def test_uhd_001(self):
+        rx_uhd = PacketGMSKRx(10)
 
-		source = blocks.vector_source_c( [1] * 8 )
-		sink = blocks.probe_signal_f()
+        source = blocks.vector_source_c( [1] * 8 )
+        sink = blocks.probe_signal_f()
 
-		dev = RadioDevice(source, sink)
+        dev = RadioDevice(source, sink)
 
-		
-		rx_uhd.set_radio_device(dev)
-		my_radio = rx_uhd.radio
-		print my_radio
+        
+        rx_uhd.set_radio_device(dev)
+        my_radio = rx_uhd.radio
+        print my_radio
 
-		samp_rate_radio = rx_uhd.radio._get_samp_rate
-		print samp_rate_radio
+        samp_rate_radio = rx_uhd.radio._get_samp_rate
+        print samp_rate_radio
 
-		str_radio = rx_uhd.radio.my_str
-		print str_radio
-		
+        str_radio = rx_uhd.radio.my_str
+        print str_radio
+        
 if __name__ == '__main__':
-	unittest.main()
+    unittest.main()

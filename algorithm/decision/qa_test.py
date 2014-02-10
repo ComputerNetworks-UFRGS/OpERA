@@ -41,72 +41,72 @@ from algorithm.abstractAlgorithm         import AbstractAlgorithm
 ## Test algorithm  module
 class QaDecision(unittest.TestCase):
 
-	## Test EnergyDecision threhold
-	def test_ed_001(self):
-		th = 10
+    ## Test EnergyDecision threhold
+    def test_ed_001(self):
+        th = 10
 
-		ed = EnergyDecision(th)
-		self.assertEqual(th, ed.threshold)
-		#self.assertEqual(ed.decision(np.array([th/2, th/2])), 0)
-		#self.assertEqual(ed.decision(np.array([th, th])), 0)
-		#self.assertEqual(ed.decision(np.array([th*2, th*2])), 1)
+        ed = EnergyDecision(th)
+        self.assertEqual(th, ed.threshold)
+        #self.assertEqual(ed.decision(np.array([th/2, th/2])), 0)
+        #self.assertEqual(ed.decision(np.array([th, th])), 0)
+        #self.assertEqual(ed.decision(np.array([th*2, th*2])), 1)
 
-	## Test Waveform threshold 
-	def test_ed_002(self):
-		global signal # wrong size. update to 1024 points
+    ## Test Waveform threshold 
+    def test_ed_002(self):
+        global signal # wrong size. update to 1024 points
 
-		th = 0.8
-		wd = WaveformDecision(th)
+        th = 0.8
+        wd = WaveformDecision(th)
 
-		self.assertEqual(th, wd.threshold)
-		arr = [1] * 1024
-		dec = wd.decision(np.array(arr))
-		dec = (0, 0)
+        self.assertEqual(th, wd.threshold)
+        arr = [1] * 1024
+        dec = wd.decision(np.array(arr))
+        dec = (0, 0)
 
-		# Random will (probaly) not match any signal
-		self.assertEqual((0, 0.0), dec)
+        # Random will (probaly) not match any signal
+        self.assertEqual((0, 0.0), dec)
 
-	## Test BayesLearningThreshold basic parameters
-	def test_bayes_001(self):
-		in_th = 10
-		min_th = 1
-		max_th = 20
-		k = 1
-		delta_th = 0.0015
+    ## Test BayesLearningThreshold basic parameters
+    def test_bayes_001(self):
+        in_th = 10
+        min_th = 1
+        max_th = 20
+        k = 1
+        delta_th = 0.0015
 
-		obj = BayesLearningThreshold( in_th = in_th,
-				min_th = min_th,
-				max_th = max_th,
-				delta_th = delta_th,
-				k = k)
+        obj = BayesLearningThreshold( in_th = in_th,
+                min_th = min_th,
+                max_th = max_th,
+                delta_th = delta_th,
+                k = k)
 
-		self.assertEqual(in_th, obj._th)
-		self.assertEqual(min_th, obj._min_th_limit)
-		self.assertEqual(max_th, obj._max_th_limit)
-		self.assertEqual(k, obj._k)
-		self.assertEqual(delta_th, obj._delta_th)
+        self.assertEqual(in_th, obj._th)
+        self.assertEqual(min_th, obj._min_th_limit)
+        self.assertEqual(max_th, obj._max_th_limit)
+        self.assertEqual(k, obj._k)
+        self.assertEqual(delta_th, obj._delta_th)
 
-	## Test BayesLearningThreshold basic parameters
-	def test_bayes_002(self):
-		in_th = 10
-		min_th = 1
-		max_th = 20
-		k = 1
-		n = 1000
-		delta_th = 0.0015
+    ## Test BayesLearningThreshold basic parameters
+    def test_bayes_002(self):
+        in_th = 10
+        min_th = 1
+        max_th = 20
+        k = 1
+        n = 1000
+        delta_th = 0.0015
 
-		obj = BayesLearningThreshold( in_th = in_th,
-				min_th = min_th,
-				max_th = max_th,
-				delta_th = delta_th,
-				k = k)
+        obj = BayesLearningThreshold( in_th = in_th,
+                min_th = min_th,
+                max_th = max_th,
+                delta_th = delta_th,
+                k = k)
 
-		dec = obj.decision( np.array([9]) )
+        dec = obj.decision( np.array([9]) )
 
-		self.assertEqual((0, 0), dec)
+        self.assertEqual((0, 0), dec)
 
 
 
 
 if __name__ == '__main__':
-	unittest.main()
+    unittest.main()

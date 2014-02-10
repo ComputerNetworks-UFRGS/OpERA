@@ -17,14 +17,126 @@ Copyright 2013 OpERA
 ## @package device
 
 # GNU Radio imports
-from gnuradio import gr
-from OpERABase import OpERABase
+from abc import ABCMeta
+from abc import abstractmethod
+
+# OpERA imports
+from OpERABase import OpERABase  #pylint: disable=F0401
+from utils     import PktBitRate #pylint: disable=F0401
+
+class AbstractSSArch(OpERABase):
+    """
+    Base class of all sensing architectures.
+    """
+
+    __metaclass__ = ABCMeta
+
+    def __init__(self, name="AbstractSSArch"):
+        """
+        CTOR
+        """
+        OpERABase.__init__(self, name=name)
+
+    @abstractmethod
+    def sense_channel(self, channel, sensing_duration):
+        """
+        Must be implemented on derived classes.
+        @param the_list List of Channel/frequencies(float) to sense.
+        @return Sense result: 0/1.
+        """
+        pass
 
 
-## Abstract class for architetures
-# This is the base class for all the architetures
-class AbstractArch(OpERABase):
-	def __init__(self, name="AbstractArch"):
-		OpERABase.__init__(self, name=name)
+    def sense_channel_list(self, channel_list, sensing_duration):
+        """
+        Sense a list of channels.
+        @param channel_list     List of channels to sense.
+        @param sensing_duration Sensing duration in each channel.
+        @return Sensing information of all channels.
+        """
+        data = []
+
+        for channel in channel_list:
+            res = self.sense_channel(channel, sensing_duration)
+            data.append(res)
+
+        return data
 
 
+
+class AbstractPktArch(object):
+    """
+    Abstract Class for any packet architectures
+    """
+    __metaclass__ = ABCMeta
+
+    def __init__(self, name):
+        self._counter = PktBitRate(name + "_bit_rate")
+
+
+    @property
+    def counter(self):
+        return self._counter
+
+
+    @property
+    @abstractmethod
+    def bits_per_symbol(self):
+        pass
+
+
+    @property
+    @abstractmethod
+    def symbols(self):
+        pass
+
+
+
+class AbstractTxPktArch(OpERABase, AbstractPktArch):
+    """
+    Base class of all packet transmission architectures.
+    """
+    __metaclass__ = ABCMeta
+
+
+    def __init__(self, name="AbstractTxPktArch"):
+        """
+        CTOR.
+        @param name
+        """
+        AbstractPktArch.__init__(self, name)
+        OpERABase.__init__(self, name)
+
+
+    def send_pkt(self, payload, eof = False):
+        """
+        Send Packet.
+        @param payload
+        """
+        self._counter.count(payload)
+        self._send_pkt(payload, eof)
+
+
+    @abstractmethod
+    def _send_pkt(self, payload, eof = False):
+        """
+        Send payload.
+        @param payload Pkt Payload.
+        @param eof End Of File.
+        """
+        pass
+
+
+class AbstractRxPktArch(OpERABase, AbstractPktArch):
+    """
+    Base class of all packet reception architectures.
+    """
+    __metaclass__ = ABCMeta
+
+    def __init__(self, name = "AbstractRxPktArch"):
+        """
+        CTOR
+        @param name
+        """
+        AbstractPktArch.__init__(self, name)
+        OpERABase.__init__(self, name)

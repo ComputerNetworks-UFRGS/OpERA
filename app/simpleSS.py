@@ -16,17 +16,6 @@ Copyright 2013 OpERA
   limitations under the License.
 """
 
-
-## Try to import easygui.
-try:
-	import easygui
-	easygui_import = True
-
-except ImportError:
-	easygui_import = False
-	
-
-
 import os
 import sys
 
@@ -43,368 +32,412 @@ import time
 import random
 
 import numpy as np
+from abc import ABCMeta, abstractmethod
 
 #Project imports:
 
-from OpERAFlow 		import OpERAFlow
+from OpERAFlow         import OpERAFlow
 from device             import *
 from algorithm.decision import EnergyDecision
-from gr_blocks          import *
-from reception.sensing  import EnergySSArch, EnergyCalculator
-from reception.packet   import PacketGMSKRx, PacketOFDMRx
-from transmission       import PacketGMSKTx, PacketOFDMTx, SimpleTx
-from utils 		import Channel, TopBlock, Logger, ChannelModeler
+from gr_blocks.sensing  import EnergySSArch, EnergyCalculator
+from gr_blocks.packet   import PacketGMSKRx, PacketOFDMRx
+from gr_blocks.packet   import PacketGMSKTx, PacketOFDMTx, SimpleTx
+from utils              import Channel, Logger, ChannelModeler
 
 
-## constants
+# Try to import easygui.
+#try:
+#	import easygui
+#	easygui_import = True
+#
+#except ImportError:
+easygui_import = False
 
+# Constants used in the program:
+
+# ranges:
 MIN_FREQ = 100e6
 MAX_FREQ = 2.2e9
 
 MIN_GAIN = 0
 MAX_GAIN = 30
 
+# options
+STR_FREQ = "Frequency"
+STR_GAIN = "Gain multiplier"
+
+#questions
+QUESTION_SET_FREQ = "Enter a frequency value. Should be in range"
+QUESTION_SET_GAIN = "Enter the gain multiplier. Should be in range"
+
+# menu (operations)
 NEW_FREQ = "Set a new frequency" 
 GAIN_MULTIPLIER = "Set a new gain multiplier"
 QUIT = "Quit"
 
+# integers representing the operations
 OPT_SET_FREQ = 1
 OPT_SET_GAIN = 2
 OPT_QUIT = 3
 
+# others
+MIN_OPT = 1
+MAX_OPT = 3
+
+YES = 1
+NO = 0
 
 ENTER = "enter"
 RAW_ENTER = ""
 
 
-## functions:
-
 # Check the os and use an apropriate function to clear the screen
 def clear_screen():
 
-	# Clear Windows command prompt.
-	if (os.name in ('ce', 'nt', 'dos')):
-    		os.system('cls')
+    # Clear Windows command prompt.
+    if (os.name in ('ce', 'nt', 'dos')):
+            os.system('cls')
 
-	# Clear the Linux terminal.
-	elif ('posix' in os.name):
-		    os.system('clear')
-
-
+    # Clear the Linux terminal.
+    elif ('posix' in os.name):
+            os.system('clear')
 
 
-###########################################################################################
-# Add energy_calculator and energy to the Logger print list.
-def add_print_list():
-	print "\n******************************************************************\n"
-	print "\nPrinting the energy\n"
-	Logger.add_to_print_list("energy_decision", "energy")
-	print "\n******************************************************************\n"
+## Class with useful methods from OpERA
+class OpERAUtils(object):
+	def __init__(self):
+		pass
 
-
-###########################################################################################
-# Prints the energy.
-def printing_energy():
-	clear_screen()
-	key = None
-
-	time.sleep(0.1)
-	Logger._enable = True
-	
-	# Press enter to exit (stop the printing).
-	while key is not ENTER:
-		add_print_list()
-		key = raw_input()
-		# If "enter" key was pressed, exit the loop:
-		if RAW_ENTER in key:
-			key = ENTER
-
-###########################################################################################
-## Definition of the radio device, uhd device, etc
-def device_definition():
-	
-	tb = OpERAFlow(name = 'US')
-
-	uhd_source = UHDSource()
-	uhd_source.samp_rate = 195512
-	device_source = RadioDevice(the_source = uhd_source, the_sink = blocks.probe_signal_f())
-
-	energy = EnergySSArch(fft_size  = 512, mavg_size = 5, algorithm = EnergyDecision(th = 0))
-
-	tb.add_path(abstract_arch = energy, radio_device = device_source, name_of_arch = 'ss')
-
-	return tb, device_source
-
-###########################################################################################
-## Easygui 
-# Frequency should be in range(100e6, 2.2e9)
-
-# Set frequency method, when using easygui
-def eg_set_frequency():
-	mens = "Enter the frequency: "
-	frequency = ""
-	float_freq = False
-	
-	frequency_ok = False
-	no_freq = False
-
-	Logger.remove_from_print_list("energy_calculator", "energy")
-
-	while frequency_ok is False and no_freq is False:
-
-		frequency = easygui.enterbox(mens)
-		##print frequency
-		if frequency is not None:
-			try:
-				float_freq = float(frequency)
-				if float_freq < MIN_FREQ or float_freq > MAX_FREQ:
-					range_error = "Frequency should be in range(100e6, 2.2e9)."
-					easygui.msgbox(range_error)
-				else:
-					frequency_ok = True
-
-			except ValueError:
-				type_error = "Frequency should be a float number."
-				easygui.msgbox(type_error)
-
-		elif frequency is None:
-			choices = ["Yes", "No"]
-			msg = "Quit the frequency setter?"	
-			reply   = easygui.buttonbox(msg,choices=choices)
-			if reply is "Yes":
-				no_freq = True
-
-	
-	return float_freq, no_freq
-
-
-## Gain multiplier for the radio device. It should be in range(0, 30).
-def eg_gain_multiplier():
-	mens = "Enter the gain multiplier: "
-	gain = ""
-	float_gain = 0
-	
-	gain_ok = False
-	no_gain = False
-
-	while gain_ok is False and no_gain is False:
-		gain = easygui.enterbox(mens)
-		if gain is not None:
-			try:
-				float_gain = float(gain)
-				if float_gain < MIN_GAIN or float_gain > MAX_GAIN:
-					range_error_msg = "Gain multiplier should be in range (0, 30)."
-					easygui.msgbox(range_error_msg)
-
-				else:
-					gain_ok = True
-
-			except ValueError:
-				type_error_msg = "Gain multiplier should be a float number."
-				easygui.msgbox(type_error_msg)
-
-	#If the user press "cancel":
-		elif gain is None:
-			choices = ["Yes", "No"]
-			msg = "Quit gain multiplier setter?"	
-			reply   = easygui.buttonbox(msg,choices=choices)
-			if reply is "Yes":
-				no_gain = True
-
-	#return both the gain multiplier and the bool which is True wheter the user press cancel.
-	return float_gain, no_gain
-			
+	@staticmethod
+	## Definition of the devices used in the program.
+	def device_definition():
 		
-## Main menu window, using easygui.
-def eg_main_window():
+		tb = OpERAFlow(name = 'US')
 
-	#remove from print list"
-	Logger.remove_from_print_list("energy_calculator", "energy")
+		uhd_source = UHDSource()
+		uhd_source.samp_rate = 195512
 
-	choices = [NEW_FREQ, GAIN_MULTIPLIER, QUIT]
-	msg = "Choose one option: "
-	reply = easygui.buttonbox(msg, choices=choices)
-	return reply
+		energy = EnergySSArch(fft_size  = 512, mavg_size = 5, algorithm = EnergyDecision(th = 0))
+
+		radio = RadioDevice(name = "radio")
+		radio.add_arch(source = uhd_source, arch = energy, sink = blocks.probe_signal_f(), uhd_device = uhd_source, name = 'ss')
+
+                tb.add_radio(radio, "radio")
+	
+		return tb, radio
+
+	@staticmethod
+	## Adds to the print list (method of the Logger class)
+	def add_print_list():
+		print "\n******************************************************************\n"
+		print "\nPrinting the energy\n"
+		Logger.add_to_print_list("energy_decision", "energy")
+		print "\n******************************************************************\n"
+
+	@staticmethod
+	## Prints the energy until the ENTER key is pressed.
+	def printing_energy():
+		clear_screen()
+		key = None
+	
+		time.sleep(0.1)
+		Logger._enable = True
+	
+		# Press enter to exit (stop the printing).
+		while key is not ENTER:
+			OpERAUtils.add_print_list()
+			key = raw_input()
+			# If "enter" key was pressed, exit the loop:
+			if RAW_ENTER in key:
+				key = ENTER
+				Logger._enable = False
+
+		Logger.remove_from_print_list("energy_decision", "energy")
+
+	
+## Abstract class for the menus.
+class AbstractMenu(object):
+	__metaclass__ = ABCMeta
+	
+	## CTOR
+	def __init__(self):
+		pass
+
+	## Reads a value (from the user) and check if it is in range (ie, min_value >= value <= max_value). 
+	# @param min_value Mininum value of the range (float number)
+	# @param max_value Maximum value of the range (float number)
+	# @param question Question asked (string type)
+	# @param option (string type)
+	# @return float_value 
+	# @return no_value Indicates if the value returned is valid (no_value = False) or if the user has cancelled the operation (no_value = True).
+	def get_value_in_range(self, min_value, max_value, question, option):
+
+		# Check if the chosen option is "Set Frequency" or "Set Gain Multiplier", in order 
+		# to use the most appropriate string formatting.
+		if option is STR_GAIN:
+			mens = "%s (%.2f, %.2f)." %(question, min_value, max_value)
+		
+		elif option is STR_FREQ:
+			mens = "%s (%.2e, %.2e)." %(question, min_value, max_value)
+		
+		value =""
+		float_value = False
+		value_ok = False
+		no_value = False
+
+		while value_ok is False and no_value is False:
+			value = self._get_value(mens)
+
+			# If it is a valid input.
+			if value is not None:
+				try:
+					float_value = float(value)
+					# If the value is a float number but it's not in range, shows an error message
+					if float_value < min_value or float_value > max_value:
+						if option is STR_GAIN:
+							range_error = "%s should be in range (%.2f, %.2f)." %(option, min_value, max_value)
+						
+						elif option is STR_FREQ:
+							range_error = "%s should be in range (%.2e, %.2e)." %(option, min_value, max_value)
+						self._show_error_msg(range_error)
+				
+					# If the value if a float number and it's in range, so the input is valid. Exits the loop.
+					else:
+						value_ok = True
+
+				# If the input is not a float number, shows an error message.
+				except ValueError:
+					type_error = "%s should be a float number." %(option)
+					self._show_error_msg(type_error)
+
+			# If the user has cancelled the operation.
+			elif value is None:
+				# Check if the user wants to quit.
+				choices = ["Yes", "No"]
+				msg = "Quit the %s setter? " %(option.lower())
+				reply = self._choose_option(msg, choices)
+
+				if reply is "Yes":
+					no_value = True
+		# Returns the value (casted to float) and a boolean that indicates if the value returned is valid or not(in case of cancelled 			operation).
+		return float_value, no_value
+
+
+	@abstractmethod
+	## Shows an error message with the appropriate GUI.
+	# @param msg Error message.
+	def _show_error_msg(self, msg):
+		pass
 	
 	
-## Execution using easygui.
-def with_easygui(tb, radio):
+	@abstractmethod
+	## Let the user choose an option and return the integer that represents it.
+	# @param msg Instruction message
+	# @param choices List of choices
+	def _choose_option(self, msg, choices):
+		pass
+
+	
+	@abstractmethod
+	## Returns the read value
+	# @param msg
+	def _get_value(self, msg):
+		pass
+
+
+## Class that manages the GUIs. 
+class Menu(AbstractMenu):
+	def __init__(self):
+		AbstractMenu.__init__(self)
+		
+		# If the import was successful, uses Easygui as GUI.
+		if easygui_import is True:
+			self._menu = EasyguiMenu()
+
+		# If it isn't, uses the Console.
+		else:
+			self._menu = ConsoleMenu()
+
+	# @param min_value Mininum value of the range (float number)
+	# @param max_value Maximum value of the range (float number)
+	# @param question Question asked (string type)
+	# @param option (string type --> or constant??)
+	def get_value_in_range(self, min_value, max_value, question, option):
+		return self._menu.get_value_in_range(min_value, max_value, question, option)
+
+	# shows the main menu 
+	def main_menu(self):
+		self._menu._main_menu()
+
+	def _show_error_msg(self, msg):
+		self._menu._show_error_msg(msg)
+	
+	
+	def _choose_option(self, msg, choices):
+		return self._menu._choose_option(msg, choices)
+
+	
+	def _get_value(self, msg):
+		self._menu._get_value(msg)
+		
+	def _show_menu(self, str_list):
+		return self._menu._show_menu(str_list)
+
+
+
+# Class for the menu (shown with easygui)
+class EasyguiMenu(AbstractMenu):
+	def __init__(self):
+		AbstractMenu.__init__(self)
+
+	def _show_error_msg(self, msg):
+		easygui.msgbox(msg)
+
+		
+	def _choose_option(self, msg, choices):
+		reply = easygui.buttonbox(msg, choices=choices)
+		if reply is "Yes":
+			return YES
+		elif reply is "No":
+			return NO
+
+	def _get_value(self, msg):
+		value = easygui.enterbox(msg)
+		return value
+
+	def _show_menu(self, str_list):
+		choices = str_list
+		msg = "Choose one option: "
+		reply = easygui.buttonbox(msg, choices=choices)
+
+		if reply is NEW_FREQ:
+			int_reply = 1
+		elif reply is GAIN_MULTIPLIER:
+			int_reply = 2
+		elif reply is QUIT:
+			int_reply = 3
+		return int_reply
+		
+
+# Class for the menu (shown in console)
+class ConsoleMenu(AbstractMenu):
+	def __init__(self):
+		AbstractMenu.__init__(self)
+
+
+	def _show_error_msg(self, msg):
+		print msg
+		
+
+	def _choose_option(self, msg, choices):
+		reply_ok = False
+
+		while reply_ok is False:		
+			print msg
+			for num, opt in enumerate(choices):
+				print "%i: %s" %(num, opt)
+
+			reply = raw_input("\nChoose one option: ")
+			try:
+				int_reply = int(reply)
+				if int_reply is 0:
+					reply_ok = True
+					return int_reply
+
+				elif int_reply is 1:
+					reply_ok = True
+					return int_reply
+
+				else:
+					print "\nReply should be 0 (Yes) or 1 (No)."
+
+			except ValueError:
+				print "\nReply should be an integer."
+		
+
+	def _get_value(self, msg):
+		str_value = raw_input("\n" + msg)
+		return str_value
+
+	def _show_menu(self, str_list):
+		print "*****************************************************************\n"
+		for num, opt in enumerate(str_list):
+			print "%i. %s" %(num, opt)
+		print "*****************************************************************\n\n"
+
+		input_ok = False
+	
+		while input_ok is False:
+			choice = raw_input("Choose one option: ")
+
+			if choice.isdigit() is True:
+				int_choice = int(choice)
+			
+				if int_choice < MIN_OPT or int_choice > MAX_OPT:
+					print "\n\nChosen operation is invalid.\n"
+			
+				else:
+					input_ok = True
+			
+			else:
+				print "\n\nEnter a number that corresponds to a valid operation.\n"
+		
+		return int_choice
+
+
+
+## Main function
+def main(tb, radio):
+
+	# instance of Menu class
+	menu = Menu()
+	
 	tb.start()
+	radio.set_center_freq(100e6)
 	continue_loop = True
 	no_freq = False
 
 	while continue_loop is True: 
-		reply = eg_main_window()
-
-		if reply is QUIT:
+		reply = menu._show_menu([NEW_FREQ, GAIN_MULTIPLIER, QUIT])
+		# Operation is quit. 
+		if reply is OPT_QUIT:
 			choices = ["Yes", "No"]
 			msg = "Are you sure?"	
-			reply   = easygui.buttonbox(msg,choices=choices)
-			if reply is "Yes":
+			reply_2 = menu._choose_option(msg, choices=choices)
+
+			# If the answer is YES, quit the program. Else, continues in the loop.
+			if reply_2 is YES:
 				tb.stop()
-				continue_loop = False
+				continue_loop = False	
+				print "\n******************************************"
+				print "\tQuitting the program."
+				print "******************************************\n"
 				os._exit(1)
 
-		elif reply is NEW_FREQ:
-			freq, no_freq = eg_set_frequency()
+		# Operation is "set a new frequency".
+		elif reply is OPT_SET_FREQ:
+			# gets the frequency
+			freq, no_freq = menu.get_value_in_range(MIN_FREQ, MAX_FREQ, QUESTION_SET_FREQ, STR_FREQ)
 			if no_freq is False:	
-				radio.center_freq = freq
-				# print the energy
-				printing_energy()
+				radio.set_center_freq(freq)
+				# prints the energy
+				OpERAUtils.printing_energy()
 
-		elif reply is GAIN_MULTIPLIER:
-			gain, no_gain = eg_gain_multiplier()
+
+		# Operation is "set the gain multiplier".
+		elif reply is OPT_SET_GAIN:
+			# gets the gain
+			gain, no_gain =  menu.get_value_in_range(MIN_GAIN, MAX_GAIN, QUESTION_SET_GAIN, STR_GAIN)
 			if no_gain is False:
-				radio._set_gain(gain)
-				printing_energy()
-
-############################################################################################
-## Terminal
- 
-# Function to set the frequency, when using console.
-def console_set_frequency():
-	str_freq = ""
-	float_freq = 0
-	
-	# Bool variable to control the loop.
-	input_ok = False
-	
-	# Clear the screen
-	clear_screen()
-	
-	#print "\nremove from print list"
-	#Logger.remove_from_print_list("energy_calculator", "energy")
-
-	# Make sure the input frequency fits the requirement.
-	while input_ok is False:
-		str_freq = raw_input("\nEnter a frequency value. Should be in range(1e8, 2.29e9): ")
-		try:
-			float_freq = float(str_freq)
-			if float_freq < MIN_FREQ or float_freq > MAX_FREQ:
-				print "\nInput should be in range (1e8, 2.29e9)."
-			
-			else:	
-				input_ok = True
-
-		except ValueError:
-			print "\nInput should be a float number."
-
-
-	# print the energy
-	##printing_energy()
-
-	return float_freq
-
-
-## Set gain multiplier of a radio device.
-def console_gain_multiplier():
-	str_gain = ""
-	float_gain = 0
-	
-	# Bool variable to control the loop.
-	input_ok = False
-	
-	# Clear the screen
-	clear_screen()
-	
-	# Make sure the input gain fits the requirement.
-	while input_ok is False:
-		str_gain = raw_input("\nEnter the gain multiplier. Should be in range(0, 30): ")
-		try:
-			float_gain = float(str_gain)
-			if float_gain < MIN_GAIN or float_gain > MAX_GAIN:
-				print "\nInput should be in range (0, 30)."
-			
-			else:	
-				input_ok = True
-
-		except ValueError:
-			print "\nInput should be a float number."
-
-	return float_gain
-
-
-## Main menu when using the console.
-def console_main_menu():
-	# Clear the screen.
-
-	#remove from print list"
-	Logger.remove_from_print_list("energy_calculator", "energy")
-	clear_screen()
-	
-	print "***************************************************************\n"
-	print "\t1. Set a new frequency.\n"
-	print "\t2. Set the gain multiplier.\n"
-	print "\t3. Quit.\n"
-	print "*****************************************************************\n\n"
-
-	input_ok = False
-
-
-
-	while input_ok is False:
-		choice = raw_input("Choose one option: ")
-
-		if choice.isdigit() is True:
-			int_choice = int(choice)
-			
-			if int_choice is not OPT_SET_FREQ and int_choice is not OPT_SET_GAIN and int_choice is not OPT_QUIT:
-				print "\n\nChosen operation is invalid.\n"
-			
-			else:
-				input_ok = True
-		
-		else:
-			print "\n\nEnter a number that corresponds to a valid operation.\n"
-		
-	return int_choice
-
-## Execution using console.
-def with_terminal(tb, radio):
-	radio.center_freq = 100e6
-	tb.start()
-	continue_loop = True
-
-	while continue_loop is True:
-		choice = console_main_menu()
-		if choice is OPT_SET_FREQ:
-			freq = console_set_frequency()
-			radio.center_freq = freq
-			# print the energy
-			printing_energy()
-
-		
-		elif choice is OPT_SET_GAIN:
-			gain = console_gain_multiplier()
-			radio._set_gain(gain)
-			# print the energy
-			printing_energy()
-
-			
-			
-		elif choice is OPT_QUIT:
-			print "\nQuitting the program.\n"
-			tb.stop()
-			continue_loop = False
-			os._exit(1)
-			
-
-
-###########################################################################################
-## Main function
-def main(tb, radio):
-
-	if easygui_import is True:
-		with_easygui(tb, radio)
-
-	elif easygui_import is False:
-		with_terminal(tb, radio)
+				radio.set_gain(gain)
+				OpERAUtils.printing_energy()
 
 if __name__ == "__main__":
-	tb, radio = device_definition()
 
-	try:
-		main(tb, radio)
-	except KeyboardInterrupt:
-		tb.stop()
-		Logger.dump('./dump/', '', 0)
+    tb, radio = OpERAUtils.device_definition()
+
+    try:
+        main(tb, radio)
+    except KeyboardInterrupt:
+        tb.stop()
+        Logger.dump('./dump/', '', 0)

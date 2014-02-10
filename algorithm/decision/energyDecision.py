@@ -14,31 +14,39 @@ Copyright 2013 OpERA
   limitations under the License.
 """
 
-## @package algorithm
+"""
+@package algorithm
+"""
 
 from algorithm.abstractAlgorithm import ThresholdAlgorithm
 from utils import Logger
 
 import numpy as np
 
-## Simple energy detection algorithm based in threshold comparion
 class EnergyDecision(ThresholdAlgorithm):
+    """
+    Simple energy threshold comparison algorithm.
+    """
 
-	## CTOR
-	# @param th Initial threshold
-	def __init__(self, th = 0):
-		ThresholdAlgorithm.__init__(self, th)
+    def __init__(self, th = 0):
+        """
+        CTOR
+        @param th Decision threshold.
+        """
+        ThresholdAlgorithm.__init__(self, th)
 
-		Logger.register('energy_decision', ['energy', 'decision'] )
+        Logger.register('energy_decision', ['energy', 'decision'] )
 
-	## @abstractmethod
-	# Called from a signal processing block to made a decision.
-	# @param data_in Mag squared of samples.
-	# @return Tuple (status, energy)
-	def decision(self, data_in):
-		energy  = np.sum( np.square(data_in) ) / (data_in.size)
 
-		Logger.append('energy_decision', 'energy', energy)
-		Logger.append('energy_decision', 'decision', (1 if self.threshold < energy else 0))
+    def decision(self, data_in):
+        """"
+        Implementation of base class abstract method.
+        @param data_in Mag squared of samples.
+        @return Tuple (status, energy)
+        """
+        energy  = np.sum( data_in ) / (data_in.size)
 
-		return ((1 if self.threshold < energy else 0), energy)
+        Logger.append('energy_decision', 'energy', energy)
+        Logger.append('energy_decision', 'decision', (1 if self.threshold < energy else 0))
+
+        return ((1 if self.threshold < energy else 0), energy)

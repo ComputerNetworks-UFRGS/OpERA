@@ -18,96 +18,181 @@ Copyright 2013 OpERA
 # Module with all classes related to device specific
 
 from abc import ABCMeta, abstractmethod
-import time
 from OpERABase import OpERABase
 
-## Abstract device
-# Interface for a specific hardware
+from utils import Channel
+
 class AbstractDevice(OpERABase):
-	__metaclass__ = ABCMeta
+    """
+    Abstract device
+    Interface for a specific hardware
+    """
+    __metaclass__ = ABCMeta
 
-	## CTOR
-	def __init__(self, name="AbstractDevice"):
-		OpERABase.__init__(self, name=name)
-
-	## Getter for center_freq property.
-	# @return Device center frequency.
-	@property
-	def center_freq(self):
-		return self._get_center_freq()
-
-	## Setter for center_freq property.
-	# @param the_channel Channel object.
-	@center_freq.setter
-	@abstractmethod
-	def center_freq(self, the_channel):
-		if not type(the_channel) == float and not type(the_channel) == int:
-			self._set_center_freq( the_channel.freq )
-			the_channel = the_channel.freq
-		else:
-			self._set_center_freq( the_channel )
+    def __init__(self, name="AbstractDevice"):
+        """
+        CTOR.
+        @param name Instance name.
+        """
+        OpERABase.__init__(self, name=name)
 
 
-	@abstractmethod
-	def _get_center_freq(self):
-		pass
-
-	@abstractmethod
-	def _set_center_freq(self, freq):
-		pass
+        self._channel = None
 
 
-	## Getter for samp_rate property
-	# @return Device sample rate
-	@property
-	def samp_rate(self):
-		return self._get_samp_rate()
+    def set_channel(self, channel):
+        """
+        Set channel.
+        @param channel Channel instance.
+        @param True
+        """
+        self._channel = channel
+        self.set_bandwidth(channel.get_bandwidth())
+        self.set_center_freq(channel.get_freq())
 
-	## Setter for samp_rate property.
-	# @param samp_rate The sample rate (integer).
-	@samp_rate.setter
-	@abstractmethod
-	def samp_rate(self, samp_rate):
-		self._set_samp_rate( samp_rate )
+        return True
 
-	## Device specific getter  for sample rate.
-	# Must be implemented on derived classes.
-	# @return Sample rate
-	@abstractmethod
-	def _get_samp_rate(self):
-		pass
 
-	## Device specific setter  for sample rate.
-	# Must be implemented on derived classes.
-	# @param samp_rate Sample rate.
-	@abstractmethod
-	def _set_samp_rate(self, sample_rate):
-		pass
+    def get_channel(self):
+        """
+        Return the current channel
+        @return Current channel.
+        """
+        return self._channel
 
-	## Getter for gain property.
-	# @return Device gain.
-	@property
-	def gain(self):
-		self._gain = self._get_gain()
-		return self._gain
 
-	## Device specific getter for gain.
-	# Must be implemented on derived classes.
-	# @return Gain.
-	@abstractmethod
-	def _get_gain():
-		pass
+    def get_center_freq(self):
+        """
+        Getter for center_freq property.
+        @return Device center frequency.
+        """
+        return self._get_center_freq()
 
-	## Setter for gain property.
-	# @param gain The gain (float).
-	@gain.setter
-	def gain(self, gain):
-		self._set_gain( gain )
-		self._gain = gain
 
-	## Device specific gain for sample rate.
-	# Must be implemented on derived classes.
-	# @param gain.
-	@abstractmethod
-	def _set_gain(self, gain):
-		pass
+    @abstractmethod
+    def _get_center_freq(self):
+        pass
+
+
+    def set_center_freq(self, the_channel):
+        """
+        Setter for center_freq property.
+        @param the_channel Channel object.
+        """
+        if type(the_channel) == Channel:
+            self._set_center_freq( the_channel.get_freq() )
+        else:
+            self._set_center_freq( the_channel )
+
+        return self.get_center_freq()
+
+
+    @abstractmethod
+    def _set_center_freq(self, freq):
+        pass
+
+
+    def get_samp_rate(self):
+        """
+        Getter for samp_rate property
+        @return Device sample rate
+        """
+        return self._get_samp_rate()
+
+
+    @abstractmethod
+    def _get_samp_rate(self):
+        """
+        Device specific getter  for sample rate.
+        Must be implemented on derived classes.
+        @return Sample rate
+        """
+        pass
+
+
+    def set_samp_rate(self, samp_rate):
+        """
+        Setter for samp_rate property.
+        @param samp_rate The sample rate (integer).
+        """
+        self._set_samp_rate( samp_rate )
+        return self.get_samp_rate()
+
+
+    @abstractmethod
+    def _set_samp_rate(self, sample_rate):
+        """
+        Device specific setter  for sample rate.
+        Must be implemented on derived classes.
+        @param samp_rate Sample rate.
+        """
+        pass
+
+
+    def get_gain(self):
+        """
+        Getter for gain property.
+        @return Device gain.
+        """
+        return self._get_gain()
+
+
+    @abstractmethod
+    def _get_gain(self):
+        """
+        Device specific getter for gain.
+        Must be implemented on derived classes.
+        @return Gain.
+        """
+        pass
+
+
+    def set_gain(self, gain):
+        """
+        Setter for gain property.
+        @param gain The gain (float).
+        """
+        self._set_gain( gain )
+        return self.get_gain()
+
+
+    @abstractmethod
+    def _set_gain(self, gain):
+        """
+        Device specific gain for sample rate.
+        Must be implemented on derived classes.
+        @param gain The gain.
+        """
+        pass
+
+
+    def get_bandwidth(self):
+        """
+        Get current device bandwidth
+        @return Device bandwidth
+        """
+        return self._get_bandwidth()
+
+
+    @abstractmethod
+    def _get_bandwidth(self):
+        """
+        Derived class implementation.
+        """
+        pass
+
+
+    def set_bandwidth(self, bw):
+        """
+        Set current device bandwidth
+        @param bw Bandwidth
+        """
+        return self._set_bandwidth(bw)
+
+
+    @abstractmethod
+    def _set_bandwidth(self, value):
+        """
+        Derived class implementation.
+        """
+        pass
