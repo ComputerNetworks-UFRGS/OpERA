@@ -1,0 +1,39 @@
+Formatando o arquivo de entrada
+Jessica Reinaldo
+%%mtime(%d/%m/%Y)
+
+%!target: html
+%!encoding: UTF-8
+
+% descrever como deve ser formatado o arquivo que o usuario dará como entrada (deve ser yaml!!).
+
+% a ideia é um ~template~, que é uma string, com dados (parametros) que devem ser substituidos de acordo com esses dados de entrada do arquivo.
+
+% o arquivo test.yaml esta com um formato parecido com  que vamos adotar!
+
+= Formato do arquivo de configuração = 
+
+O arquivo de configuração, que deve ser do tipo YAML, contém comentários que indicam o que pode ser a entrada em cada um dos campos.
+
+Esse arquivo está formatado da seguinte forma:
+
+nome_da_configuração:
+  - parâmetro1: <opção_escolhida1>
+  - parâmetro2: <opção escolhida2>
+
+
+= Opções disponíveis no arquivo de configuração =
+
+No momento, o arquivo de configuração permite que sejam criados rádios para sensoriamento espectral utilizando detectores de energia e de forma de onda.
+
+O arquivo está da seguinte forma:
+
+spectrum_sensing:
+  - type: <tipo_de_detector>
+  - fft_size: <fft_size>
+
+
+O parâmetro 'type' pode ser 'ed' ou 'wfd' (sem aspas). Qualquer outra entrada irá gerar uma exceção.
+Já o parâmetro fft_size deve ser preenchido com um inteiro.
+
+

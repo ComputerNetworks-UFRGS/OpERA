@@ -35,8 +35,11 @@ namespace gr {
      */
     class OPERA_API cyclo_detector : virtual public gr::hier_block2
     {
+
+
      public:
       typedef boost::shared_ptr<cyclo_detector> sptr;
+      gr::opera::cyclo_fam_calcspectrum_vcf::sptr d_calcspectrum;
 
       /*!
        * \brief Return a shared_ptr to a new instance of opera::cyclo_detector.
@@ -47,6 +50,8 @@ namespace gr {
        * creating new instances.
        */
       static sptr make(int Np, int P, int L);
+
+	  const std::vector<std::vector<float> > &get_estimate() { return d_calcspectrum->get_estimate(); };
     };
 
   } // namespace opera

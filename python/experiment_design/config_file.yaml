@@ -1,0 +1,52 @@
+# YAML
+
+# The spectrum sensing configurations.
+
+my_radio1:
+  spectrum_sensing:
+
+    # Type must be ed (for energy detector) or wfd (for waveform detector). Anything different will raise an exception.
+    type: 
+      ed:
+        EnergySSArch(fft_size={fft_size}, mavg_size=5, algorithm=EnergyDecision(th=0))
+
+    # FFT size must be an integer.
+    fft_size: 1024 
+
+  # The USRP configurations.
+  usrp:
+    # The ip.
+    ip: 10.1.1.146
+
+  tx:
+
+    type: 
+      gmsk:
+        PacketGMSKTx(modulator={modulator})
+    # The parameter is not obrigatory. If you don't declare it, the default value will be used.
+    modulator: digital.gmsk_mod(samples_per_symbol=2, bt=0.35)
+    
+
+my_radio2:
+  spectrum_sensing:
+
+    # Type must be ed (for energy detector) or wfd (for waveform detector). Anything different will raise an exception.
+    type: 
+      ed:
+        EnergySSArch(fft_size={fft_size}, mavg_size=5, algorithm=EnergyDecision(th=0))
+
+    # FFT size must be an integer.
+    fft_size: 1024
+
+  # The USRP configurations.
+  usrp:
+    # The ip.
+    ip: 10.1.1.146
+
+  tx:
+
+    type:
+      ofdm:
+        # The parameters are not obrigatory. If you don't declare some of these parameters, the default value will be used.
+        PacketOFDMTx(modulation={modulation}, cp_length={cp_length}, fft_length={fft_length}, occupied_tones={occupied_tones})
+    modulation: "qam64"

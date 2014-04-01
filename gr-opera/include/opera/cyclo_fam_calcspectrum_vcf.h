@@ -52,6 +52,9 @@ namespace gr {
        * \brief Calculate.
        */
       virtual double calculate_cyclo(std::vector< std::complex<float> > input) = 0;
+      virtual const std::vector<std::vector<float> > &get_estimate() = 0;
+
+
     };
 
   } // namespace opera
