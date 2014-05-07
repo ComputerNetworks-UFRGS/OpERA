@@ -9,7 +9,8 @@ SS_TX_TEMPLATE = "import sys\n"\
 "from OpERAFlow import OpERAFlow\n"\
 "from device import RadioDevice, UHDSink\n"\
 "from gr_blocks.utils import UHDSourceDummy\n" \
-"from packet import PacketGMSKTx, PacketOFDMTx\n\n" \
+"from packet import PacketGMSKTx, PacketOFDMTx\n" \
+"from packet import PacketGMSKRx, PacketOFDMRx\n\n" \
 "from device import RadioDevice, UHDSource\n"\
 "from sensing import EnergyDecision, WaveformDecision, BayesLearningThreshold\n"\
 "from sensing import EnergySSArch, EnergyCalculator\n"\
@@ -28,9 +29,21 @@ SS_TX_TEMPLATE = "import sys\n"\
 "# The arch is a {tx_type}\n" \
 "tx_arch = {tx_arch}\n\n" \
 "" \
-"" \
 "radio.add_arch(source=tx_source, arch=tx_arch, sink=tx_sink, uhd_device=tx_sink,\n" \
 "               name='tx')\n\n" \
+"" \
+"" \
+"# RX\n" \
+"rx_sink = {rx_sink}\n\n" \
+"" \
+"rx_source = UHDSourceDummy()\n\n" \
+"" \
+"# The arch is a {rx_type}\n" \
+"rx_arch = {rx_arch}\n\n" \
+"" \
+"radio.add_arch(source=rx_source, arch=rx_arch, sink=rx_sink, uhd_device=rx_sink,\n" \
+"               name='rx')\n\n" \
+"" \
 "" \
 "# SS\n" \
 "#  ss_type = {ss_type}\n\n"\
@@ -39,7 +52,7 @@ SS_TX_TEMPLATE = "import sys\n"\
 "ss_source.samp_rate = 195512\n\n"\
 "" \
 "" \
-"ss_detector = {ss_detector}\n"\
+"ss_detector = {ss_detector}\n\n"\
 "radio.add_arch(source=ss_source, arch=ss_detector, sink=blocks.probe_signal_f(), uhd_device=ss_source,\n" \
 "               name='ss')\n"\
 

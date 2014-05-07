@@ -35,16 +35,13 @@ import numpy as np
 from abc import ABCMeta, abstractmethod
 
 #Project imports:
-# ACHO QUE TEM MUITA COISA DESATUALIZADA
-#::TODO:: verificar isso
 from OpERAFlow import OpERAFlow
 from device import *
 from sensing import EnergyDecision
 from gr_blocks import *
 from sensing import EnergySSArch, EnergyCalculator
-from packet import PacketGMSKRx, PacketOFDMRx
-from transmission import SimpleTx
-from utils import Channel, TopBlock, Logger, ChannelModeler
+from packet import PacketGMSKRx, PacketOFDMRx, SimpleTx
+from utils import Channel, Logger, ChannelModeler
 
 
 # Try to import easygui.
@@ -129,12 +126,10 @@ class OpERAUtils(object):
 
         radio_source = blocks.vector_source_f(map(int, np.random.randint(0, 100, 1000)), True)
 
-        device_source = RadioDevice(the_source=radio_source, the_sink=uhd_sink, uhd_device=uhd_sink)
+        device_source = RadioDevice(name="device_source")
+        device_source.add_arch(source=radio_source, arch=uhd_sink, sink=uhd_sink, uhd_device=uhd_sink, name='tx')
 
-        # The arch is a SimpleTx
         tx_arch = SimpleTx()
-
-        tb.add_path(abstract_arch=tx_arch, radio_device=device_source, name_of_arch='tx')
 
         return tb, device_source
 
