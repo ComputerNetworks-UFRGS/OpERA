@@ -50,10 +50,13 @@ class APath(object):
         if not isinstance(sink, tuple):
             sink = (sink, 0)
 
+		# eh o source[0] que eh arch, source eh tupla!
         if isinstance(source[0], UHDBase):
-            source = source.uhd
+            #source = source.uhd  --> anteriormente
+            source = source[0].uhd
         if isinstance(sink[0], UHDBase):
-            sink = sink.uhd
+            #sink = sink.uhd  --> anteriormente
+            sink = sink[0].uhd
 
         self._source = source
         self._arch   = arch

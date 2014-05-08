@@ -127,9 +127,11 @@ class OpERAUtils(object):
         radio_source = blocks.vector_source_f(map(int, np.random.randint(0, 100, 1000)), True)
 
         device_source = RadioDevice(name="device_source")
-        device_source.add_arch(source=radio_source, arch=uhd_sink, sink=uhd_sink, uhd_device=uhd_sink, name='tx')
+        device_source.add_arch(source=radio_source, arch=uhd_sink, sink=uhd_sink, uhd_device=uhd_sink, name='source/sink')
 
-        tx_arch = SimpleTx()
+        #tx_arch = SimpleTx()
+
+        #.add_arch(source=radio_source, arch=tx_arch, sink=uhd_sink, uhd_device=uhd_sink, name="tx")
 
         return tb, device_source
 
@@ -204,7 +206,7 @@ class AbstractMenu(object):
                 msg = "Quit the %s setter? " % (option.lower())
                 reply = self._choose_option(msg, choices)
 
-                if reply is "Yes":
+                if reply is YES:
                     no_value = True
         # Returns the value (casted to float) and a boolean that indicates if the value
         #  returned is valid or not(in case of cancelled operation).
@@ -463,7 +465,6 @@ def main(tb, radio):
             freq, no_freq = menu.get_value_in_range(MIN_FREQ, MAX_FREQ, QUESTION_SET_TX_FREQ, STR_FREQ)
             if no_freq is False:
                 radio.center_freq = freq
-
 
         # Operation is "set the gain multiplier".
         elif reply is OPT_SET_GAIN:
