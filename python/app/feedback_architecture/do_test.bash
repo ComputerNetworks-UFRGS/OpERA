@@ -1,20 +1,18 @@
-#!/usr/bin/env bash
-
-
-function startTest()
-{
-    IT=$1
-    EBN0=$2
-
-    PH1=0.9
-
-    python ata --it $IT --ebn0 $EBN0 --ph1 $PH1 --sensing cyclostationary
-    python tsha.py --it $IT --ebn0 $EBN0 --ph1 $PH1 --sensing cyclostationary
-}
-
-
-for i in `seq 0 20`; do
-    for ebn0 in `seq -20 1 5`; do
-            startTest  $i $ebn0
-    done
-done
+python single_ss.py --sensing ed --ph1 0.1
+python single_ss.py --sensing ed --ph1 0.5
+python single_ss.py --sensing ed --ph1 0.9
+python single_ss.py --sensing wfd --ph1 0.1
+python single_ss.py --sensing wfd --ph1 0.5
+python single_ss.py --sensing wfd --ph1 0.9
+python single_ss.py --sensing cfd --ph1 0.1
+python single_ss.py --sensing cfd --ph1 0.5
+python single_ss.py --sensing cfd --ph1 0.9
+python tsha.py --sensing cfd --ph1 0.1
+python tsha.py --sensing cfd --ph1 0.5
+python tsha.py --sensing cfd --ph1 0.9
+python ata.py --sensing wfd --ph1 0.1
+python ata.py --sensing wfd --ph1 0.5
+python ata.py --sensing wfd --ph1 0.9
+#python ata.py --sensing cfd --ph1 0.1
+#python ata.py --sensing cfd --ph1 0.5
+#python ata.py --sensing cfd --ph1 0.9

@@ -20,6 +20,7 @@ Copyright 2013 OpERA
 
 from algorithm.abstractAlgorithm import ThresholdAlgorithm
 from utils import Logger
+import copy
 
 import numpy as np
 
@@ -39,10 +40,14 @@ class CycloDecision(ThresholdAlgorithm):
         """
         ThresholdAlgorithm.__init__(self, th)
 
-        Logger.register('cyclo_decision', ['corr', 'decision'])
+        Logger.register('cyclo_decision', ['decision', ])
 
         from opera import cyclo_fam_calcspectrum_vcf
-        self._algoritm = cyclo_fam_calcspectrum_vcf(Np, P, L)
+        self._algorithm = cyclo_fam_calcspectrum_vcf(Np, P, L)
+
+	self._xx = {};
+	self._xx[0] = {0: "00", 1: "01"}
+	self._xx[1] = {0: "10", 1: "11"}
 
 
     def decision(self, data_in):
@@ -51,10 +56,12 @@ class CycloDecision(ThresholdAlgorithm):
         @param data_in Mag squared of samples.
         @return Tuple (status, energy)
         """
-        _sum = self._algoritm.calculate_cyclo(data_in.tolist())
+
+        _sum = self._algorithm.calculate_cyclo(data_in.tolist())
         _sum = _sum / len(data_in)
 
-        Logger.append('cyclo_decision', 'corr', _sum)
-        Logger.append('cyclo_decision', 'decision', (1 if self.threshold < _sum else 0))
+	dec = 1 if self.threshold < _sum else 0
 
-        return ((1 if self.threshold < _sum else 0), _sum)
+        Logger.append('cyclo_decision', 'decision', self._xx[Logger._ch_status][dec])
+
+        return dec, _sum

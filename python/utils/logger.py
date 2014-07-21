@@ -19,9 +19,9 @@ Copyright 2013 OpERA
 
 import os
 from threading import Semaphore 
-import matplotlib
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
+#import matplotlib
+#matplotlib.use("Agg")
+#import matplotlib.pyplot as plt
 
 
 class Logger(object):
@@ -30,7 +30,7 @@ class Logger(object):
     Used it to add information.
     """
 
-    _enable = False
+    _enable = True
     _history = {}
     _objects = {}
     _ch_status = None
@@ -87,10 +87,15 @@ class Logger(object):
     @staticmethod
     def clear_all():
         """
-        Clear all data added
+        Clear all data added.
+	The registered classes and parameters are maintained.
         """
-        Logger._history = {}
-        Logger._ch_status = {}
+	for name in Logger._history:
+		for i in Logger._history[name]:
+			Logger._history[name][i] = []
+
+	print "--- Clearing ch_status" 
+        Logger._ch_status = None
 
 
     @staticmethod
@@ -260,16 +265,17 @@ class Logger(object):
                 fstr = '/' + name + '_' + d + ('_' + str(it) if it != -1 else '') + '.txt'
 
                 # Create file and dump all items
-                fd = open(directory + fstr, 'w')
-                fd.write('\n'.join(map(lambda x: str(x), data[d])) + "\n")
+                with open(directory + fstr, 'w') as fd:
+                	fd.write('\n'.join(map(lambda x: str(x), data[d])) + "\n")
+		
             # Save global
             else:
                 print '\titem: ', d
                 fstr = '/' + name + '_global' + ('_' + str(it) if it != -1 else '') + '.txt'
 
                 # Create file and dump all items
-                fd = open(directory + fstr, 'a')
-                fd.write(d + ':' + str(data[d]) + '\n')
+                with open(directory + fstr, 'a') as fd:
+                	fd.write(d + ':' + str(data[d]) + '\n')
 
 
     @staticmethod

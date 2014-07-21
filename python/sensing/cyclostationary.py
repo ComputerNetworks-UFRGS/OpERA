@@ -229,7 +229,7 @@ from device import UHDSSArch  #pylint: disable=F0401
 #        self.connect(self, d_stream_to_vector, d_Np_fft, d_calcspectrum, self) #pylint: disable=E1101
 
 #::TODO:: descricao de classes, metodos e seus parametros
-class CycloDetector(gr.sync_block):
+class CycloBuffer(gr.sync_block):
     """
 
     """
@@ -245,14 +245,74 @@ class CycloDetector(gr.sync_block):
         gr.sync_block.__init__(self,
                                name="CycloDetector",
                                in_sig=[np.dtype((np.complex64, Np))],  #pylint: disable=E1101
+                               out_sig=[np.dtype((np.complex64,  Np*P))]
+                               )
+
+	self._Np = Np
+	self._P = P
+	self._L = L
+
+	self._dec = 0
+	self._p = 0
+        self._sum = 0
+	self._to_algo = [np.array([np.complex64()] * Np) ] * P 
+
+
+    def work(self, input_items, output_items):
+        """
+        @param input_items
+        @param output_items
+        """
+
+	_out_idx = 0
+
+        for idx in range(len(input_items[0])):
+            self._to_algo[self._p][:] = input_items[0][idx]
+
+	    self._p += 1
+	    if (self._p == self._P): 
+                self._p = 0
+
+	    xxx = []
+	    for x in self._to_algo:
+	    	xxx.extend(x)
+	    output_items[0][idx][:] = np.array(xxx)
+
+        return len(output_items[0])
+
+    def output(self):
+        return (self._dec, self._sum)
+
+
+class CycloDetector(gr.sync_block):
+    """
+
+    """
+
+    def __init__(self, Np, P, L, algorithm):
+        """
+        CTOR
+        @param Np
+        @param P
+        @param L
+        """
+
+        gr.sync_block.__init__(self,
+                               name="CycloDetector",
+                               in_sig=[np.dtype((np.complex64, Np * P))],  #pylint: disable=E1101
                                out_sig=None
                                )
 
-        from sensing import CycloDecision
+        self._algorithm = algorithm
 
-        self._algorithm = CycloDecision(Np, P, L, 0)
+	self._Np = Np
+	self._P = P
+	self._p = 0
+	self._L = L
 
+	self._dec = 0
         self._sum = 0
+	self._to_algo = []
 
 
     def work(self, input_items, output_items):
@@ -262,12 +322,12 @@ class CycloDetector(gr.sync_block):
         """
 
         for idx in range(len(input_items[0])):
-            energy, self._sum = self._algorithm.decision(input_items[0][idx])
-
-        return len(input_items[0]) * len(input_items)
+		self._dec, self._sum = self._algorithm.decision(input_items[0][idx])
+		
+	return len(input_items[0])
 
     def output(self):
-        return self._sum
+        return (self._dec, self._sum)
 
 
 class CycloSSArch(UHDSSArch):
@@ -289,7 +349,7 @@ class CycloSSArch(UHDSSArch):
         UHDSSArch.__init__(self,
                            name="CycloSSArch",
                            input_signature=gr.io_signature(1, 1, gr.sizeof_gr_complex),
-                           output_signature=gr.io_signature(1, 1, gr.sizeof_gr_complex * Np)
+                           output_signature=gr.io_signature(1, 1, gr.sizeof_gr_complex * Np * P)
                            )
 
     #::TODO:: nao usa os parametros input e output sig
@@ -298,14 +358,18 @@ class CycloSSArch(UHDSSArch):
         @param input_signature The input signature.
         @param output_signature The output signature.
         """
-        from opera import stream_to_vector_overlap
         from gnuradio import fft
 
-        #self._stream = stream_to_vector_overlap(gr.sizeof_gr_complex, self.Np, self.Np-self.L)
         self._stream = blocks.stream_to_vector(gr.sizeof_gr_complex, self.Np)
         self._fft = fft.fft_vcc(self.Np, True, [])
+        self._buffer = CycloBuffer(self.Np, self.P, self.L)
 
-        self._add_connections([self, self._stream, self._fft, self])
+	self._vs1 = blocks.vector_to_stream(gr.sizeof_gr_complex, self.Np)
+	self._vs2 = blocks.stream_to_vector(gr.sizeof_gr_complex, self.Np * self.P)
+
+
+        #self._add_connections([self, self._stream, self._fft, self._buffer, self])
+        self._add_connections([self, self._stream, self._fft, self._vs1, self._vs2, self])
 
         return None
 
@@ -315,6 +379,7 @@ class CycloSSArch(UHDSSArch):
         @param channel
         @param sensing_duration
         """
+	raise NotImplemented
         pass
 
 
@@ -324,29 +389,39 @@ if __name__ == '__main__':
     P = 1
     L = 1024
 
+    from grc_gnuradio import blks2 as grc_blks2
     from gr_blocks.utils import UHDSourceDummy
     from gnuradio import digital
     from channels import AWGNChannel
     from opera import cyclo_detector
+    from utils import Logger
 
+    Logger._ch_status = 1
 
-    modulator = digital.psk.psk_mod(constellation_points=8,
-                                    mod_code="gray",
-                                    differential=True,
-                                    samples_per_symbol=2,
-                                    excess_bw=0.35,
-                                    verbose=False,
-                                    log=False,
-                                    )
+    modulator = grc_blks2.packet_mod_b(digital.ofdm_mod(
+			    options=grc_blks2.options(
+				    modulation="bpsk",
+				    fft_length=512,
+				    occupied_tones=200,
+				    cp_length=128,
+				    pad_for_usrp=True,
+				    log=None,
+				    verbose=None,
+				    ),
+			    ),
+        	payload_length=0,
+        )
 
     src = UHDSourceDummy(modulator=modulator)
 
     the_source = AWGNChannel(component=src)
 
     from sensing import CycloSSArch
+    from sensing import CycloDecision
 
     cyclo_fam = CycloSSArch(Np, P, L)
-    cyclo_sink = CycloDetector(Np, P, L)
+    algorithm = CycloDecision(1024, 2, 512, 1)
+    cyclo_sink = CycloDetector(Np, P, L, algorithm)
 
     the_source._component.set_active_freqs([1, ])
     the_source._component.set_center_freq(0)
@@ -361,8 +436,10 @@ if __name__ == '__main__':
 
     _cyclo = {'noise': {}, 'signal': {}, 'noise_max': {}, 'signal_min': {}}
     import numpy as np
-    for ebn0 in range(-20, 21):
-        the_source.set_EbN0(ebn0)
+
+    the_source._component.set_center_freq(1)
+    for ebn0 in range(4, 5):
+        the_source.set_ebn0(ebn0)
         _arr = []
         for i in range(500):
             time.sleep(0.05)
@@ -375,8 +452,8 @@ if __name__ == '__main__':
         _cyclo['noise_max']["%2.0f" % ebn0] = max(_arr)
 
     the_source._component.set_center_freq(1)
-    for ebn0 in range(-20, 21):
-        the_source.set_EbN0(ebn0)
+    for ebn0 in range(-10, 5):
+        the_source.set_ebn0(ebn0)
         _arr = []
         for i in range(500):
             time.sleep(0.05)

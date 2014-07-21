@@ -37,7 +37,9 @@ class EnergyDecision(ThresholdAlgorithm):
         ThresholdAlgorithm.__init__(self, th)
         Logger.register('energy_decision', ['energy', 'decision'])
 
-        print "energy decision\n"
+	self._xx = {};
+	self._xx[0] = {0: "00", 1: "01"}
+	self._xx[1] = {0: "10", 1: "11"}
 
     def decision(self, data_in):
         """"
@@ -45,10 +47,11 @@ class EnergyDecision(ThresholdAlgorithm):
         @param data_in Mag squared of samples.
         @return Tuple (status, energy)
         """
-        data_in /= data_in.size
         energy = np.sum(data_in) / data_in.size
 
-        Logger.append('energy_decision', 'energy', energy)
-        Logger.append('energy_decision', 'decision', (1 if self.threshold < energy else 0))
+	dec = 1 if self.threshold < energy else 0
 
-        return (1 if self.threshold < energy else 0), energy
+        Logger.append('energy_decision', 'energy', energy)
+        Logger.append('energy_decision', 'decision', self._xx[Logger._ch_status][dec])
+
+        return dec, energy

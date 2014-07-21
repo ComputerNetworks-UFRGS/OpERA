@@ -39,7 +39,7 @@ class AWGNChannel(AbstractChannel):
     #  -----    |
     # | Mod |*>-- (original signal)
     #  -----
-    def __init__(self, name="AWGNChannel", component=None, ebn0=10):
+    def __init__(self, name="AWGNChannel", bits_per_symbol = 2, component=None, ebn0=10):
         """
         CTOR
         @param name Block name.
@@ -50,6 +50,7 @@ class AWGNChannel(AbstractChannel):
         # ::TRICKY:: Initialization must be AFTER declaring _ch_effect.
         AbstractChannel.__init__(self, name=name, component=component)
 
+	self.bits_per_symbol = bits_per_symbol
         self.set_ebn0(ebn0)
 
 
@@ -58,8 +59,9 @@ class AWGNChannel(AbstractChannel):
         Set the ebn0 value used
         @param ebn0
         """
+	ebn0 = float(ebn0)
         # Formula from file ber_simulation.grc in usr/share/gnuradio/examples/digital/demod/
-        self._ch_effect.set_amplitude(1.0 / math.sqrt(2.0 * 8 * 10**(ebn0/10.0)))
+        self._ch_effect.set_amplitude(1.0 / math.sqrt(2.0 * self.bits_per_symbol * 10**(ebn0/10.0)))
 
 
     def _build(self, input_signature, output_signature):

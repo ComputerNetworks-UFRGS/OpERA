@@ -278,7 +278,7 @@ class KunstTimeFeedback(ExponentialTimeFeedback):
     def __init__(self):
         ExponentialTimeFeedback.__init__(self,
                                          min_time=1,
-                                         max_time=64,
+                                         max_time=128,
                                          base=2)
 
     def decrease_time(self):

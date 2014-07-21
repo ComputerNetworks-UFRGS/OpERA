@@ -44,12 +44,45 @@ from abc import ABCMeta, abstractmethod
 
 from OpERAFlow import OpERAFlow
 from device    import *
-from algorithm import EnergyDecision, WaveformDecision, HierarchicalFeedbackAlgorithm
-from sensing   import EnergySSArch2,  WaveformSSArch2, CycloSSArch
+from sensing import EnergyDecision, WaveformDecision
+from sensing   import EnergySSArch,  WaveformSSArch, CycloSSArch
 from channels  import AWGNChannel
-from gr_blocks.utils import SNREstimator, UHDSourceDummy
+from gr_blocks.utils import UHDSourceDummy
 from utils import Logger
 
+
+TOTAL_IT = range(0, 10)
+
+class HierarchicalSSArch(gr.sync_block):
+
+	def __init__(self, input_len, algo1, algo2):
+		gr.sync_block.__init__(self,
+			name="hier",
+			in_sig = [np.dtype((np.float32, input_len)), np.dtype((np.complex64, input_len))],  #pylint: disable=E1101
+			#in_sig = [np.dtype((np.float32, input_len)), np.dtype((np.float32, input_len))],  #pylint: disable=E1101
+			out_sig= None   #pylint: disable=E1101
+		 )
+
+		self.algo1 = algo1
+		self.algo2 = algo2
+
+		Logger.register('hier', ['decision',] )
+
+		self._xx = {};
+		self._xx[0] = {0: "00", 1: "01"}
+		self._xx[1] = {0: "10", 1: "11"}
+
+	def work(self, input_items, output_items):
+		for idx in  range(len(input_items[0])):
+			decf, vf = self.algo1.decision(input_items[0][idx])
+
+			if decf == 0:
+				decf, vf = self.algo2.decision(input_items[1][idx])	
+
+			Logger.append('hier', 'decision', self._xx[Logger._ch_status][decf])
+		return len(input_items[0])
+
+			
 
 class OpERAUtils(object):
     """
@@ -63,108 +96,139 @@ class OpERAUtils(object):
         """
 
         tb = OpERAFlow(name='US')
+	bits_per_symbol = 2
 
-        modulator = digital.psk.psk_mod(constellation_points=8,
-                                        mod_code="gray",
-                                        differential=True,
-                                        samples_per_symbol=2,
-                                        excess_bw=0.35,
-                                        verbose=False,
-                                        log=False)
+        modulator = grc_blks2.packet_mod_b(digital.ofdm_mod(
+        		options=grc_blks2.options(
+        			modulation="bpsk",
+        			fft_length=512,
+        			occupied_tones=200,
+        			cp_length=128,
+        			pad_for_usrp=True,
+        			log=None,
+        			verbose=None,
+        		),
+        	),
+        	payload_length=0,
+        )
 
         uhd_source = UHDSourceDummy(modulator=modulator)
         uhd_source.pre_connect(tb)  # Gambi
-        the_source = AWGNChannel(component=uhd_source)
+        the_source = AWGNChannel(component=uhd_source, bits_per_symbol = bits_per_symbol)
 
-        energy = EnergySSArch2(fft_size=1024, mavg_size=1, algorithm=EnergyDecision(options.threshold))
+        arch1 = EnergySSArch(fft_size=1024, mavg_size=1)
+        algo1 = EnergyDecision(options.th['ed'])
 
-        if options.sensing == "waveform":
-            waveform = WaveformSSArch2(fft_size=1024)
-            hier = HierarchicalFeedbackAlgorithm(algorithm=WaveformDecision(threshold=options.wft))
-        else:
-            from sensing import CycloDecision
+        if options.sensing == "wfd":
+            arch2 = WaveformSSArch(fft_size=1024)
+            algo2 = WaveformDecision(options.th['wfd'])
+        elif options.sensing == 'cfd':
+            arch2 = CycloSSArch(64, 16, 4)
+	    from sensing import CycloDecision
+            algo2 = CycloDecision(64, 16, 4, options.th['cfd'])
+	else:
+		raise AttributeError
 
-            hier = HierarchicalFeedbackAlgorithm(algorithm=CycloDecision(1024, 1, 1024, th=options.cft),
-                                                 _type=np.complex64)
-            waveform = CycloSSArch(1024, 1, 1024)
-
+        hier = HierarchicalSSArch(1024, algo1=algo1, algo2=algo2)
 
         radio = RadioDevice(name="radio")
-        radio.add_arch(source=the_source, arch=energy,   sink=(hier, 0), uhd_device=uhd_source, name='ed')
-        radio.add_arch(source=the_source, arch=waveform, sink=(hier, 1), uhd_device=uhd_source, name='feedback')
+        radio.add_arch(source=the_source, arch=arch1,   sink=(hier, 0), uhd_device=uhd_source, name='ed')
+        radio.add_arch(source=the_source, arch=arch2,   sink=(hier, 1), uhd_device=uhd_source, name='sensing')
         tb.add_radio(radio, "radio")
 
-        return tb, radio
+        return tb, radio, algo1, algo1
 
 
 if __name__ == "__main__":
 
     parser = OptionParser()
-    parser.add_option("", "--ebn0", type="float", default=10.0)
     parser.add_option("", "--ph1", type="float", default=0.5)
-    parser.add_option("", "--it", type="int", default=0)
-    parser.add_option("", "--sensing", type="string", default="cyclostationary")
+    parser.add_option("", "--sensing", type="string", default="cfd")
     (options, args) = parser.parse_args()
-
-    config_tmp = {}
-    with open('noise.data', 'r') as fd:
-        config_tmp = yaml.load(fd)
-    config = copy.deepcopy(config_tmp)
- 
-    for key in config_tmp.iterkeys():
-        for ebn0 in config_tmp[key].iterkeys():
-            config[key][float(ebn0)] = config_tmp[key][ebn0]
-
-    options.threshold = config['energy'][options.ebn0]
-    options.threshold = options.threshold + math.fabs(options.threshold * 0.1)
-    options.wft = config['corr'][options.ebn0]
-    options.cft = config['cyclo2'][options.ebn0]
     options.ph0 = 1.0 - options.ph1
 
-    tb, radio = OpERAUtils.device_definition(options)
-    radio.feedback._component.set_active_freqs([1, ])
-    radio.feedback.set_EbN0(options.ebn0)
+    print "Loading YAML %s" % options.sensing
+    thresholds = {}
+    with open('lambda_%s.txt' % options.sensing, 'r') as fd:
+	import yaml
+        thresholds[options.sensing] = yaml.load(fd)
 
-    time.sleep(1)
+    with open('lambda_ed.txt', 'r') as fd:
+	import yaml
+        thresholds['ed'] = yaml.load(fd)
+
     Logger._enable = True
-    print "#### TESTING WITH EBN0 %f, IT %d" % (options.ebn0, options.it)
 
-    enable = True
+    options.th = {}
+    options.th['ed'] = 999999999
+    options.th[options.sensing] = 999999999
 
-    def model_channel():
-        """
 
-        """
-        global enable
+    for pfa in (0, 50, 100):
+	    #for ebn0 in (-20, -15, -10, -5, 0, 5):
+	    for ebn0 in (10, ):
+		options.th = {}
+		options.th['ed'] = thresholds['ed'][ebn0][ int(math.ceil(1999 * (1-(pfa/100.0)))) ]
+		
+		options.th[options.sensing] = thresholds[options.sensing][ebn0][ int(math.ceil(1999 * (1-(pfa/100.0)))) ] 
 
-        status = random.choice([0, 1])
+		tb, radio, algo1, algo2 = OpERAUtils.device_definition(options)
+		radio.ed._component.set_active_freqs([1, ])
+		radio.ed._component.set_center_freq(0)
 
-        while enable:
-            if status == 1:
-                radio.feedback._component.set_center_freq(1)
-                Logger._ch_status = 1
-                time.sleep(random.expovariate(1.0/2.0) * options.ph1 * 2)
-            else:
-                radio.feedback._component.set_center_freq(0)
-                Logger._ch_status = 0
-                time.sleep(random.expovariate(1.0/2.0) * options.ph0 * 2)
+		for options.it in TOTAL_IT:
+			print "PFA: %f, EBN0: %d, IT: %d" % (pfa, ebn0, options.it)
+			radio.ed.set_ebn0(ebn0)
+			algo1._threshold =  options.th['ed'] 
+			algo2._threshold =  options.th[options.sensing]
 
-            status = (status + 1) % 2
+			tin = time.clock()
+################################################################################
+			options.ph = {0: options.ph0, 1: options.ph1 }
+			t_tot = 0.0
+			status = random.choice([0, 1])
 
-    t_mc = threading.Thread(target=model_channel)
+			while True:
+			    x = random.random()
+			    t_next = math.fabs(random.expovariate(1.0/3.0))
+		
+			    if x < options.ph1:
+			        status = 1
+		            else:
+				status = 0
 
-    tin = time.clock()
-    tb.start()
-    t_mc.start()
+       			    if t_tot + t_next > 10.0:
+     			        t_next = 10.0 - t_tot 
 
-    time.sleep(10)
+			    if status == 1:
+				radio.ed._component.set_center_freq(1)
+				print "--- Setting ch_status to 1"
+				Logger._ch_status = 1
+			    else:
+				radio.ed._component.set_center_freq(0)
+				print "--- Setting ch_status to 0"
+				Logger._ch_status = 0
 
-    enable = False
-    tb.stop()
-    tfin = time.clock()
+			    if t_tot == 0:
+				tb.start()
+			    time.sleep(t_next)
 
-    Logger.register('global', ['clock', ])
-    Logger.set('global', 'clock', tfin - tin)
+			    t_tot += t_next
+			    if t_tot >= 10.0:
+			   	break;
+################################################################################
+			tb.stop()
+			tb.wait()
+			tfin = time.clock()
+			enable = False
 
-    subdir =  "ebn0_{ebn0}".format(ebn0=options.ebn0)
-    Logger.dump('./hierarchical_unc_11_%s_%02d/' % (options.sensing, options.ph1 * 10), subdir, options.it)
+			Logger.register('global', ['clock', ])
+			Logger.set('global', 'clock', tfin - tin)
+			
+			_sdir = '/hier_%s_%02d_%02d/' % (options.sensing, options.ph1 * 10, pfa)
+			_dir =  "single/ebn0_{ebn0}".format(ebn0=ebn0)
+			Logger.dump(_dir, _sdir, options.it)
+			Logger.clear_all()
+			# wait for thread model_channel finish
+			with open("log.txt", "a+") as log:
+				log.write(_dir +  _sdir )

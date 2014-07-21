@@ -108,7 +108,7 @@ class UHDBaseArch(gr.hier_block2):
         raise AttributeError('Radio is None')
 
 
-class UHDGenericArch(UHDBaseArch, OpERABase):
+class UHDGenericArch(UHDBaseArch):
     """
     """
 
@@ -121,29 +121,29 @@ class UHDGenericArch(UHDBaseArch, OpERABase):
         @param input_signature A gr.io_signature instance.
         @param output_signature A gr.io_signature instance.
         """
-        OpERABase.__init__(self, name=name)
         UHDBaseArch.__init__(self,
                              name=name,
                              input_signature=input_signature,
                              output_signature=output_signature
                              )
 
-        self._block = self._build(input_signature, output_signature)
+        _block = self._build(input_signature, output_signature)
 
         # Connect input/outputs if necessary
         """
         ::TODO::
         Pass this code to UHDBaseArch. Maybe in the pre_process function ?
         """
-        blocks = []
-        if input_signature.min_streams():
-            blocks.append(self)
+        if _block:
+            blocks = []
+            if input_signature.min_streams():
+                blocks.append(self)
 
-        blocks.append(self._block)
+            blocks.append(_block)
 
-        if output_signature.min_streams():
-            blocks.append(self)  #pylint: disable=E1101
-        self._add_connections(blocks)
+            if output_signature.min_streams():
+                blocks.append(self)  #pylint: disable=E1101
+            self._add_connections(blocks)
 
 
     #::TODO:: o parametro callback aparece na doc, mas nao esta dentree os parametros da funcao
@@ -159,7 +159,7 @@ class UHDGenericArch(UHDBaseArch, OpERABase):
         pass
 
 
-class UHDSSArch(UHDBaseArch, AbstractSSArch):
+class UHDSSArch(UHDGenericArch, AbstractSSArch):
     """
     Base architecture for spectrum sensing with UHD devices.
     """
@@ -174,29 +174,11 @@ class UHDSSArch(UHDBaseArch, AbstractSSArch):
         @param output_signature A gr.io_signature instance.
         """
         AbstractSSArch.__init__(self, name)
-        UHDBaseArch.__init__(self,
+        UHDGenericArch.__init__(self,
                              name=name,
                              input_signature=input_signature,
                              output_signature=output_signature
                              )
-
-        self._sensing = self._build(input_signature, output_signature)
-        # Connect input/outputs if necessary
-        if self._sensing:
-            """
-            ::TODO::
-            Pass this code to UHDBaseArch. Maybe in the pre_process function ?
-            """
-            blocks = []
-            if input_signature.min_streams():
-                blocks.append(self)
-
-            blocks.append(self._sensing)
-
-            if output_signature.min_streams():
-                blocks.append(self)  #pylint: disable=E1101
-            self._add_connections(blocks)
-
 
     @abstractmethod
     def _build(self, input_signature, output_signature):
@@ -243,7 +225,7 @@ class UHDSSArch(UHDBaseArch, AbstractSSArch):
         pass
 
 
-class UHDTxPktArch(UHDBaseArch, AbstractTxPktArch):
+class UHDTxPktArch(UHDGenericArch, AbstractTxPktArch):
     """
     Base architecture to send packets with UHD devices
     """
@@ -258,27 +240,10 @@ class UHDTxPktArch(UHDBaseArch, AbstractTxPktArch):
         @param output_signature A gr.io_signature instance.
         """
         AbstractTxPktArch.__init__(self, name)
-        UHDBaseArch.__init__(self, name=name,
+        UHDGenericArch.__init__(self, name=name,
                              input_signature=input_signature,
                              output_signature=output_signature
                              )
-
-        # Derived class implementation
-        self._modulator = self._build(input_signature, output_signature)
-
-        # Connect input/outputs if necessary
-        """
-        ::TODO::
-        Pass this code to UHDBaseArch. Maybe in the pre_process function ?
-        """
-        blocks = []
-        if input_signature.min_streams():
-            blocks.extend([self, self._modulator])
-        if output_signature.min_streams():
-            blocks.append(self)  #pylint: disable=E1101
-
-        self._add_connections(blocks)
-
 
     @abstractmethod
     def _build(self, input_signature, output_signature):
@@ -301,7 +266,7 @@ class UHDTxPktArch(UHDBaseArch, AbstractTxPktArch):
         time.sleep(0.01)
 
 
-class UHDRxPktArch(UHDBaseArch, AbstractRxPktArch):
+class UHDRxPktArch(UHDGenericArch, AbstractRxPktArch):
     """
     Receive data through USRP.
     This is the base class for the rx devices.
@@ -317,28 +282,13 @@ class UHDRxPktArch(UHDBaseArch, AbstractRxPktArch):
         @param output_signature A gr.io_signature instance.
         """
         AbstractRxPktArch.__init__(self, name)
-        UHDBaseArch.__init__(self, name=name,
+        UHDGenericArch.__init__(self, name=name,
                              input_signature=input_signature,
                              output_signature=output_signature
                              )
 
         # keep callback
         self._callback = callback
-
-        # Build demodulator
-        self._demod = self._build(self._pkt_rx_callback, input_signature, output_signature)
-
-        # Connect input/outputs if necessary
-        """
-        ::TODO::
-        Pass this code to UHDBaseArch. Maybe in the pre_process function ?
-        """
-        blocks = []
-        if input_signature.min_streams():
-            blocks.extend([self, self._demod])  #pylint: disable=E1101
-        if output_signature.min_streams():
-            blocks.append(self)  #pylint: disable=E1101
-        self._add_connections(blocks)
 
 
     @abstractmethod

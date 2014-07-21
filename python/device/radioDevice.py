@@ -42,26 +42,22 @@ class APath(object):
         @param sink
         """
 
-        # We keep source, arch and sink as a tuple (obj, port)
-        if not isinstance(source, tuple):
+        if isinstance(source, UHDBase):
+            source = source.uhd
+        if isinstance(sink, UHDBase):
+            sink = sink.uhd
+
+        if source and not isinstance(source, tuple):
             source = (source, 0)
-        if not isinstance(arch, tuple):
+        if arch and not isinstance(arch, tuple):
             arch = (arch, 0)
-        if not isinstance(sink, tuple):
+        if sink and not isinstance(sink, tuple):
             sink = (sink, 0)
 
-		# eh o source[0] que eh arch, source eh tupla!
-        if isinstance(source[0], UHDBase):
-            #source = source.uhd  --> anteriormente
-            source = source[0].uhd
-        if isinstance(sink[0], UHDBase):
-            #sink = sink.uhd  --> anteriormente
-            sink = sink[0].uhd
 
         self._source = source
-        self._arch   = arch
-        self._sink   = sink
-
+        self._arch = arch
+        self._sink = sink
 
         self._state = APath.PENDING
 
@@ -69,11 +65,11 @@ class APath(object):
         """
         Function override.
         """
-        if hasattr(self._source[0], name):
+        if self._source and hasattr(self._source[0], name):
             return hasattr(self._source[0], name)
-        elif hasattr(self._arch[0], name):
+        elif self._arch and hasattr(self._arch[0], name):
             return hasattr(self._arch[0], name)
-        elif hasattr(self._sink[0], name):
+        elif self._sink and hasattr(self._sink[0], name):
             return hasattr(self._sink[0], name)
 
         raise AttributeError
@@ -82,11 +78,11 @@ class APath(object):
         """
         Function override.
         """
-        if hasattr(self._source[0], name):
+        if self._source and hasattr(self._source[0], name):
             return getattr(self._source[0], name)
-        elif hasattr(self._arch[0], name):
+        elif  self._arch and hasattr(self._arch[0], name):
             return getattr(self._arch[0], name)
-        elif hasattr(self._sink[0], name):
+        elif self._sink and hasattr(self._sink[0], name):
             return getattr(self._sink[0], name)
 
         raise AttributeError("%s not found in wrapper APath" % name)
@@ -100,9 +96,12 @@ class APath(object):
         if self.is_connected():
             return
 
-        isinstance(self._source[0], UHDBaseArch) and self._source[0].pre_connect(tb)
-        isinstance(self._sink[0]  , UHDBaseArch) and self._sink[0].pre_connect(tb)
-        isinstance(self._arch[0]  , UHDBaseArch) and self._arch[0].pre_connect(tb)
+        if self._source:
+            isinstance(self._source[0], UHDBaseArch) and self._source[0].pre_connect(tb)
+        if self._sink:
+            isinstance(self._sink[0], UHDBaseArch) and self._sink[0].pre_connect(tb)
+        if self._arch:
+            isinstance(self._arch[0], UHDBaseArch) and self._arch[0].pre_connect(tb)
 
         if self._arch:
             self._source and tb.connect(self._source, self._arch)

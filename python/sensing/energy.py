@@ -29,7 +29,7 @@ from utils  import Logger    #pylint: disable=F0401
 import time
 import numpy as np
 
-class EnergyCalculator(gr.sync_block):
+class EnergyDetector(gr.sync_block):
     """
     Sink Block
     """
@@ -44,8 +44,7 @@ class EnergyCalculator(gr.sync_block):
         gr.sync_block.__init__(self,
                 name=name,
                 in_sig = [np.dtype((np.float32, vec_size))],  #pylint: disable=E1101
-                out_sig= [np.dtype((np.float32, 1024))]   #pylint: disable=E1101
-                #out_sig= [np.float32]   #pylint: disable=E1101
+                out_sig= None   #pylint: disable=E1101
         )
 
         self._algorithm = algorithm
@@ -66,8 +65,6 @@ class EnergyCalculator(gr.sync_block):
         """
         for idx in range(len(input_items[0])):
             self._decision, self._energy = self._algorithm.decision(input_items[0][idx])
-            #output_items[0][idx] =  np.array([self._decision] * 1024)
-            output_items[0][idx] =  self._decision
 
         return len(input_items[0])
 
@@ -80,29 +77,24 @@ class EnergyCalculator(gr.sync_block):
         return (self._decision, self._energy)
 
 
-class EnergyDetectorC(gr.hier_block2):
+class EnergyDetectorGambi(gr.hier_block2):
     """
     Top level of Energy Detector sensing algorithm.
     A object of this class must be declared and connected in a flow blocksaph.
     The inputs are:
        in0    :    A vector of floats with len fft_size
-       out0:    A single float that represents the energy calculated
     """
 
-    def __init__(self, fft_size, mavg_size, algorithm, name="EnergyDetectorC"):
+    def __init__(self, fft_size, mavg_size, name="EnergyDetectorC"):
         """
         CTOR
         @param fft_size FFT Size.
-        @param mavg_size Moving average size.
-        @param algorithm ThresholdAlgorithm instance.
-        @param name
         """
 
         gr.hier_block2.__init__(self,
                 name=name,
                 input_signature=gr.io_signature(1, 1, gr.sizeof_gr_complex),
-                #output_signature=gr.io_signature(1, 1, gr.sizeof_float),
-                output_signature=gr.io_signature(1, 1, gr.sizeof_float*1024),
+                output_signature=gr.io_signature(1, 1, gr.sizeof_float*fft_size),
          )
 
         # Blocks
@@ -111,11 +103,9 @@ class EnergyDetectorC(gr.hier_block2):
         fft_0 = fft.fft_vcc(fft_size, True, [])
         c2mag_0 = blocks.complex_to_mag_squared(fft_size)
 
-        ## Instantiate the energy calculator
-        self._ec = EnergyCalculator(fft_size, algorithm)
-
         ## Flow graph
-        self.connect(self, s2v_0, fft_0, c2mag_0, self._ec, self)  #pylint: disable=E1101
+        self.connect(self, s2v_0, fft_0, c2mag_0, self)  #pylint: disable=E1101
+        #self.connect(self, s2v_0, fft_0, self)  #pylint: disable=E1101
 
 
 class EnergySSArch(UHDSSArch):
@@ -123,7 +113,7 @@ class EnergySSArch(UHDSSArch):
     Architecture for performing energy detection
     """
 
-    def __init__(self, fft_size, mavg_size, algorithm):
+    def __init__(self, fft_size, mavg_size):
         """
         CTOR
         @param fft_size FFT Size.
@@ -131,19 +121,16 @@ class EnergySSArch(UHDSSArch):
         @param algorithm A ThresholdAlgorithm instance.
         """
 
-        self._detector = EnergyDetectorC(
+        self._detector = EnergyDetectorGambi(
                 fft_size = fft_size,
                 mavg_size = mavg_size,
-                algorithm = algorithm
         )
-
 
         # ::TRICKY:: Calls abstract _build method
         UHDSSArch.__init__(self,
                            name="EnergySSArch",
                            input_signature=gr.io_signature(1, 1, gr.sizeof_gr_complex),
                            output_signature=gr.io_signature(1, 1, gr.sizeof_float * 1024),
-                           #output_signature=gr.io_signature(1, 1, gr.sizeof_float),
                            )
 
 
@@ -174,4 +161,5 @@ class EnergySSArch(UHDSSArch):
         Implementation of the base class abstract method.
         @return Return tuple (decision, energy)
         """
+	raise NotImplemented
         return self._detector._ec.output()
